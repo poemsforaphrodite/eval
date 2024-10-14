@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from 'next/link'; // Import Link from next/link
 
 export default function Home() {
   return (
@@ -47,6 +48,16 @@ export default function Home() {
           >
             Read our docs
           </a>
+        </div>
+
+        {/* Add links to Login and Signup */}
+        <div className="flex gap-4">
+          <Link href="/login" className="text-blue-500">
+            Login
+          </Link>
+          <Link href="/signup" className="text-green-500">
+            Signup
+          </Link>
         </div>
       </main>
       <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
