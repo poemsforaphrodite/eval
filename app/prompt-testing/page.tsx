@@ -47,6 +47,11 @@ export default function PromptTestingPage() {
     response?: string;
   }>({});
 
+  // Updated state variables for image functionality
+  const [promptImage, setPromptImage] = useState<File | null>(null);
+  const [contextImage, setContextImage] = useState<File | null>(null);
+  const [responseImage, setResponseImage] = useState<File | null>(null);
+
   useEffect(() => {
     const user = Cookies.get('username');
     if (user) {
@@ -155,6 +160,24 @@ export default function PromptTestingPage() {
       };
       reader.readAsText(e.target.files[0]);
     }
+  };
+
+  // Function to encode image to base64
+  const encodeImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          // Extract the base64 part from the Data URL
+          const base64String = reader.result.split(',')[1];
+          resolve(base64String);
+        } else {
+          reject(new Error('Failed to read file as base64.'));
+        }
+      };
+      reader.onerror = error => reject(error);
+    });
   };
 
   const handleRunTest = async () => {
@@ -274,6 +297,43 @@ export default function PromptTestingPage() {
       } catch (error: any) {
         console.error('Error running audio model evaluations:', error.response?.data || error.message);
         setErrors(['An error occurred while running audio model evaluations. Please try again.']);
+      } finally {
+        setLoading(false);
+      }
+    } else if (inputType === 'image') {
+      if (!promptImage || !contextImage || !responseImage) {
+        setErrors(['Please upload all three image files (prompt, context, and response).']);
+        return;
+      }
+
+      try {
+        setLoading(true);
+
+        // Encode images to base64
+        const [promptBase64, contextBase64, responseBase64] = await Promise.all([
+          encodeImage(promptImage),
+          encodeImage(contextImage),
+          encodeImage(responseImage)
+        ]);
+
+        // Send encoded images to the image model evaluation endpoint
+        const response = await axios.post('/api/models/image', {
+          username,
+          modelName: selectedModel,
+          promptImage: promptBase64,
+          contextImage: contextBase64,
+          responseImage: responseBase64,
+        });
+
+        if (response.data.success) {
+          setSuccess('Image evaluation completed successfully.');
+          console.log('Image evaluation result:', response.data.result);
+        } else {
+          setErrors([response.data.error || 'Failed to run image evaluation.']);
+        }
+      } catch (error: any) {
+        console.error('Error running image evaluation:', error.response?.data || error.message);
+        setErrors(['An error occurred while running image evaluation. Please try again.']);
       } finally {
         setLoading(false);
       }
@@ -577,114 +637,61 @@ export default function PromptTestingPage() {
                               <div className="space-y-6">
                                 <Label className="text-white text-lg mb-2 block">Upload Image Files</Label>
                                 <div className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="prompt-image" className="text-white text-sm mb-1 block">Prompt Image</Label>
-                                    <div
-                                      className="border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
-                                      onDragOver={(e) => e.preventDefault()}
-                                      onDrop={(e) => {
-                                        e.preventDefault();
-                                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                                          // Handle prompt_image upload
-                                          setSuccess('Prompt image dropped successfully!');
-                                          setErrors([]);
-                                        }
-                                      }}
-                                    >
-                                      <Input
-                                        type="file"
-                                        id="prompt-image"
-                                        accept=".png,.jpg,.jpeg"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                          // Handle prompt_image upload
-                                          setSuccess('Prompt image uploaded successfully!');
-                                          setErrors([]);
-                                        }}
-                                      />
-                                      <Label htmlFor="prompt-image" className="cursor-pointer">
-                                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                                        <p className="mt-1 text-sm text-white">
-                                          Drag and drop or click to upload Prompt Image
-                                        </p>
-                                        <p className="mt-1 text-xs text-gray-400">
-                                          Limit 200MB per file • PNG, JPG, JPEG
-                                        </p>
+                                  {['prompt', 'context', 'response'].map((type) => (
+                                    <div key={type}>
+                                      <Label htmlFor={`${type}-image`} className="text-white text-sm mb-1 block">
+                                        {type.charAt(0).toUpperCase() + type.slice(1)} Image
                                       </Label>
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="context-image" className="text-white text-sm mb-1 block">Context Image</Label>
-                                    <div
-                                      className="border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
-                                      onDragOver={(e) => e.preventDefault()}
-                                      onDrop={(e) => {
-                                        e.preventDefault();
-                                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                                          // Handle context_image upload
-                                          setSuccess('Context image dropped successfully!');
-                                          setErrors([]);
-                                        }
-                                      }}
-                                    >
-                                      <Input
-                                        type="file"
-                                        id="context-image"
-                                        accept=".png,.jpg,.jpeg"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                          // Handle context_image upload
-                                          setSuccess('Context image uploaded successfully!');
-                                          setErrors([]);
+                                      <div
+                                        className="border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                          e.preventDefault();
+                                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                                            const file = e.dataTransfer.files[0];
+                                            if (type === 'prompt') setPromptImage(file);
+                                            if (type === 'context') setContextImage(file);
+                                            if (type === 'response') setResponseImage(file);
+                                            setSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} image dropped successfully!`);
+                                            setErrors([]);
+                                          }
                                         }}
-                                      />
-                                      <Label htmlFor="context-image" className="cursor-pointer">
-                                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                                        <p className="mt-1 text-sm text-white">
-                                          Drag and drop or click to upload Context Image
+                                      >
+                                        <Input
+                                          type="file"
+                                          id={`${type}-image`}
+                                          accept=".png,.jpg,.jpeg"
+                                          className="hidden"
+                                          onChange={(e) => {
+                                            if (e.target.files && e.target.files[0]) {
+                                              const file = e.target.files[0];
+                                              if (type === 'prompt') setPromptImage(file);
+                                              if (type === 'context') setContextImage(file);
+                                              if (type === 'response') setResponseImage(file);
+                                              setSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} image uploaded successfully!`);
+                                              setErrors([]);
+                                            }
+                                          }}
+                                        />
+                                        <Label htmlFor={`${type}-image`} className="cursor-pointer">
+                                          <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                                          <p className="mt-1 text-sm text-white">
+                                            Drag and drop or click to upload {type.charAt(0).toUpperCase() + type.slice(1)} Image
+                                          </p>
+                                          <p className="mt-1 text-xs text-gray-400">
+                                            Limit 200MB per file • PNG, JPG, JPEG
+                                          </p>
+                                        </Label>
+                                      </div>
+                                      {(type === 'prompt' && promptImage) || 
+                                       (type === 'context' && contextImage) || 
+                                       (type === 'response' && responseImage) ? (
+                                        <p className="mt-2 text-sm text-white">
+                                          {type.charAt(0).toUpperCase() + type.slice(1)} image selected
                                         </p>
-                                        <p className="mt-1 text-xs text-gray-400">
-                                          Limit 200MB per file • PNG, JPG, JPEG
-                                        </p>
-                                      </Label>
+                                      ) : null}
                                     </div>
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="response-image" className="text-white text-sm mb-1 block">Response Image</Label>
-                                    <div
-                                      className="border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
-                                      onDragOver={(e) => e.preventDefault()}
-                                      onDrop={(e) => {
-                                        e.preventDefault();
-                                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                                          // Handle response_image upload
-                                          setSuccess('Response image dropped successfully!');
-                                          setErrors([]);
-                                        }
-                                      }}
-                                    >
-                                      <Input
-                                        type="file"
-                                        id="response-image"
-                                        accept=".png,.jpg,.jpeg"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                          // Handle response_image upload
-                                          setSuccess('Response image uploaded successfully!');
-                                          setErrors([]);
-                                        }}
-                                      />
-                                      <Label htmlFor="response-image" className="cursor-pointer">
-                                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                                        <p className="mt-1 text-sm text-white">
-                                          Drag and drop or click to upload Response Image
-                                        </p>
-                                        <p className="mt-1 text-xs text-gray-400">
-                                          Limit 200MB per file • PNG, JPG, JPEG
-                                        </p>
-                                      </Label>
-                                    </div>
-                                  </div>
+                                  ))}
                                 </div>
                               </div>
                             )}
