@@ -3,11 +3,9 @@ import OpenAI from 'openai';
 import { connectToDatabase } from '../../../lib/mongodb';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const config = {
-  api: {
-    bodyParser: false, // Disable Next.js's default body parsing
-  },
-};
+// Add this new configuration
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
