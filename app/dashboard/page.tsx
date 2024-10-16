@@ -43,6 +43,13 @@ interface Model {
 // {{ edit_1 }} Add a helper function to capitalize the first letter
 const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
+// Add this interface for the summary data
+interface SummaryData {
+  totalTokens: number;
+  averageAccuracy: number;
+  totalQueries: number;
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const [username, setUsername] = useState<string | undefined>('');
@@ -58,6 +65,11 @@ export default function Dashboard() {
   const [lowScoreQueries, setLowScoreQueries] = useState<Evaluation[]>([]);
   const THRESHOLD = 0.6; // You can adjust this threshold as needed
   const tableRef = useRef<HTMLDivElement>(null);
+  const [summaryData, setSummaryData] = useState<SummaryData>({
+    totalTokens: 0,
+    averageAccuracy: 0,
+    totalQueries: 0,
+  });
 
   useEffect(() => {
     const storedUsername = Cookies.get('username');
@@ -116,6 +128,21 @@ export default function Dashboard() {
 
       if (Array.isArray(data.evaluations)) {
         setEvaluations(data.evaluations);
+        // Calculate summary data
+        const totalTokens = data.evaluations.reduce((sum, evaluation) => {
+          if (evaluation.tokenCount !== undefined) {
+            return sum + evaluation.tokenCount;
+          }
+          // Fallback: estimate tokens based on prompt and response length
+          const estimatedTokens = (evaluation.prompt.length + evaluation.response.length) / 4; // Rough estimate
+          return sum + estimatedTokens;
+        }, 0);
+        const averageAccuracy = data.evaluations.reduce((sum, evaluation) => sum + evaluation.factors.Accuracy.score, 0) / data.evaluations.length;
+        setSummaryData({
+          totalTokens: Math.round(totalTokens), // Round to nearest whole number
+          averageAccuracy: parseFloat(averageAccuracy.toFixed(2)),
+          totalQueries: data.evaluations.length,
+        });
         // Transform evaluations data for LineChart
         const transformedData = data.evaluations.map((evalResult: Evaluation, index: number) => ({
           queryNumber: index + 1,
@@ -255,7 +282,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* New: Available Models selection */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -347,6 +374,21 @@ export default function Dashboard() {
                 </div>
               </CardHeader>
               <CardContent>
+                {/* Add summary row */}
+                <div className="mb-4 p-4 bg-gray-700 rounded-md">
+                  <h3 className="text-lg font-semibold text-purple-400 mb-2">Summary</h3>
+                  <div className="grid grid-cols-3 gap-4 text-gray-300">
+                    <div>
+                      <span className="font-medium">Total Tokens:</span> {summaryData.totalTokens}
+                    </div>
+                    <div>
+                      <span className="font-medium">Average Accuracy:</span> {summaryData.averageAccuracy}
+                    </div>
+                    <div>
+                      <span className="font-medium">Total Queries:</span> {summaryData.totalQueries}
+                    </div>
+                  </div>
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b border-gray-700">
