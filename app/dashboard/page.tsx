@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
@@ -8,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts'; // Updated Recharts components
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { LogOut, Search, Menu } from "lucide-react"
+import { LogOut, Search, Menu, AlertCircle } from "lucide-react"
 import { motion } from "framer-motion"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface Evaluation {
   username: string;
@@ -54,6 +55,9 @@ export default function Dashboard() {
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModelName, setSelectedModelName] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState(false); // Add this state
+  const [lowScoreQueries, setLowScoreQueries] = useState<Evaluation[]>([]);
+  const THRESHOLD = 0.6; // You can adjust this threshold as needed
+  const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const storedUsername = Cookies.get('username');
@@ -70,6 +74,13 @@ export default function Dashboard() {
       fetchEvaluations(username);
     }
   }, [username, selectedModelName]);
+
+  useEffect(() => {
+    const lowScores = evaluations.filter(evaluation => 
+      Object.values(evaluation.factors).some(factor => factor.score < THRESHOLD)
+    );
+    setLowScoreQueries(lowScores);
+  }, [evaluations]);
 
   // Function to aggregate evaluation scores
   const aggregateEvaluationData = (data: Evaluation[]) => {
@@ -159,6 +170,10 @@ export default function Dashboard() {
     router.push('/login');
   };
 
+  const scrollToTable = () => {
+    tableRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   if (!username) {
     return null; // or a loading spinner
   }
@@ -219,21 +234,29 @@ export default function Dashboard() {
             </Button>
           </div>
         </header>
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card className="mb-8 bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-purple-400">Welcome to your Dashboard, {username}!</CardTitle>
-                <CardDescription className="text-gray-400">This is a protected page. You should only see this if you're logged in.</CardDescription>
-              </CardHeader>
-            </Card>
-          </motion.div>
 
-          {/* New: Available Models selection moved here */}
+        {/* New: Notification Bar */}
+        {lowScoreQueries.length > 0 && (
+          <div className="bg-gray-800 border-b border-gray-700 p-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Low Score Queries Detected</AlertTitle>
+              <AlertDescription>
+                {lowScoreQueries.length} queries have scores below the threshold of {THRESHOLD}.
+                <Button 
+                  variant="link" 
+                  className="text-red-400 hover:text-red-300 p-0 ml-2" 
+                  onClick={scrollToTable}
+                >
+                  View Details
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* New: Available Models selection */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -302,6 +325,7 @@ export default function Dashboard() {
           </motion.div>
 
           <motion.div
+            ref={tableRef}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
@@ -339,7 +363,14 @@ export default function Dashboard() {
                   </TableHeader>
                   <TableBody>
                     {evaluations.map((evalResult, idx) => (
-                      <TableRow key={idx} className="border-b border-gray-700">
+                      <TableRow 
+                        key={idx} 
+                        className={`border-b border-gray-700 ${
+                          Object.values(evalResult.factors).some(factor => factor.score < THRESHOLD)
+                            ? 'bg-red-900 bg-opacity-20'
+                            : ''
+                        }`}
+                      >
                         <TableCell className="font-medium text-gray-300">{evalResult.prompt}</TableCell>
                         <TableCell className="text-gray-300">{evalResult.factors.Accuracy.score}</TableCell>
                         <TableCell className="text-gray-300">{evalResult.factors.Hallucination.score}</TableCell>

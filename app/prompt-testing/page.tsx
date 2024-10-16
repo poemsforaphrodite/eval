@@ -37,6 +37,16 @@ export default function PromptTestingPage() {
   const [promptJson, setPromptJson] = useState<string | null>(null);
   const [contextTxt, setContextTxt] = useState<string | null>(null);
 
+  // New state variables for audio functionality
+  const [promptAudio, setPromptAudio] = useState<File | null>(null);
+  const [contextAudio, setContextAudio] = useState<File | null>(null);
+  const [responseAudio, setResponseAudio] = useState<File | null>(null);
+  const [transcriptions, setTranscriptions] = useState<{
+    prompt?: string;
+    context?: string;
+    response?: string;
+  }>({});
+
   useEffect(() => {
     const user = Cookies.get('username');
     if (user) {
@@ -73,10 +83,47 @@ export default function PromptTestingPage() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      setFile(event.target.files[0]);
-      setSuccess('File selected successfully!');
+      const file = event.target.files[0];
+      setFile(file);
+      setSuccess(`File ${file.name} selected successfully!`);
       setErrors([]);
+
+      // Handle different file types
+      if (file.name.endsWith('.json')) {
+        handleJsonFile(file);
+      } else if (file.name.endsWith('.csv')) {
+        handleCsvFile(file);
+      } else {
+        setErrors(['Unsupported file type. Please upload a JSON or CSV file.']);
+      }
     }
+  };
+
+  const handleJsonFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        JSON.parse(e.target?.result as string);
+        setSuccess('JSON file parsed successfully!');
+      } catch (error) {
+        setErrors(['Invalid JSON format. Please check your file.']);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCsvFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      // For simplicity, we're just checking if it's a non-empty string
+      // In a real application, you might want to validate the CSV structure
+      if (typeof e.target?.result === 'string' && e.target.result.trim().length > 0) {
+        setSuccess('CSV file loaded successfully!');
+      } else {
+        setErrors(['Invalid CSV file. Please check your file.']);
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Add handlers for uploading Prompt JSON
@@ -113,7 +160,7 @@ export default function PromptTestingPage() {
   const handleRunTest = async () => {
     setErrors([]);
     setSuccess('');
-    
+
     if (!selectedModel) {
       setErrors(['Please select a valid model.']);
       return;
@@ -123,59 +170,110 @@ export default function PromptTestingPage() {
     const modelType = selectedModel.split(' (')[1].replace(')', '').toLowerCase();
     console.log('Model type:', modelType);
 
-    if (modelType === 'simple') {
-      if (!file) {
-        setErrors(['Please upload a valid test data JSON file.']);
-        return;
-      }
-      try {
-        const reader = new FileReader();
-        reader.onload = async () => {
-          try {
-            const testData = JSON.parse(reader.result as string);
-            console.log('Parsed JSON data:', testData);
-            setLoading(true);
-            const apiUrl = `/api/models/simple`;
-            console.log('API URL:', apiUrl);
-            const response = await axios.post(apiUrl, { testData, username, modelName: selectedModel });
-            console.log('API response:', response);
-            setSuccess('Simple model evaluations completed successfully.');
-            // You can add more logic here to handle the evaluation results
-          } catch (error) {
-            console.error('Error in API call or JSON parsing:', error);
-            setErrors(['Invalid JSON format or API error. Please check your file and try again.']);
-          } finally {
-            setLoading(false);
+    if (inputType === 'text') {
+      if (modelType === 'simple') {
+        if (!file) {
+          setErrors(['Please upload a valid test data JSON file.']);
+          return;
+        }
+        try {
+          const reader = new FileReader();
+          reader.onload = async () => {
+            try {
+              const testData = JSON.parse(reader.result as string);
+              console.log('Parsed JSON data:', testData);
+              setLoading(true);
+              const apiUrl = `/api/models/simple`;
+              console.log('API URL:', apiUrl);
+              const response = await axios.post(apiUrl, { testData, username, modelName: selectedModel });
+              console.log('API response:', response);
+              setSuccess('Simple model evaluations completed successfully.');
+              // You can add more logic here to handle the evaluation results
+            } catch (error) {
+              console.error('Error in API call or JSON parsing:', error);
+              setErrors(['Invalid JSON format or API error. Please check your file and try again.']);
+            } finally {
+              setLoading(false);
+            }
+          };
+          reader.readAsText(file);
+        } catch (error) {
+          console.error('Error processing uploaded file:', error);
+          setErrors(['Failed to process the uploaded file.']);
+        }
+      } else if (modelType === 'custom' || modelType === 'huggingface') {
+        if (!promptJson || !contextTxt) {
+          setErrors(['Please upload both Prompt JSON and Context TXT files.']);
+          return;
+        }
+
+        try {
+          setLoading(true);
+          const response = await axios.post('/api/models/custom', {
+            username,
+            modelName: selectedModel,
+            promptJson,
+            contextTxt,
+          });
+
+          if (response.data.success) {
+            setSuccess('Custom model evaluations are running successfully.');
+          } else {
+            setErrors([response.data.message || 'Failed to run custom model evaluations.']);
           }
-        };
-        reader.readAsText(file);
-      } catch (error) {
-        console.error('Error processing uploaded file:', error);
-        setErrors(['Failed to process the uploaded file.']);
+        } catch (error: any) {
+          console.error('Error running custom model evaluations:', error);
+          setErrors(['An error occurred while running custom model evaluations. Please try again.']);
+        } finally {
+          setLoading(false);
+        }
       }
-    } else if (modelType === 'custom' || modelType === 'huggingface') {
-      if (!promptJson || !contextTxt) {
-        setErrors(['Please upload both Prompt JSON and Context TXT files.']);
+    } else if (inputType === 'audio') {
+      if (!promptAudio || !contextAudio || !responseAudio) {
+        setErrors(['Please upload all three audio files (prompt, context, and response).']);
         return;
       }
 
       try {
         setLoading(true);
-        const response = await axios.post('/api/models/custom', {
+
+        // Transcribe audio files
+        const transcribeAudio = async (file: File, type: string) => {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('type', type);
+          const response = await axios.post('/api/transcribe', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+          return response.data.text;
+        };
+
+        const [promptText, contextText, responseText] = await Promise.all([
+          transcribeAudio(promptAudio, 'prompt'),
+          transcribeAudio(contextAudio, 'context'),
+          transcribeAudio(responseAudio, 'response'),
+        ]);
+
+        console.log('Transcribed texts:', { promptText, contextText, responseText });
+
+        // Send transcribed data to the audio model evaluation endpoint
+        const response = await axios.post('/api/models/audio', {
           username,
           modelName: selectedModel,
-          promptJson,
-          contextTxt,
+          prompt: promptText,
+          context: contextText,
+          response: responseText,
         });
 
         if (response.data.success) {
-          setSuccess('Custom model evaluations are running successfully.');
+          setSuccess('Audio model evaluations completed successfully.');
+          setTranscriptions({ prompt: promptText, context: contextText, response: responseText });
         } else {
-          setErrors([response.data.message || 'Failed to run custom model evaluations.']);
+          setErrors([response.data.error || 'Failed to run audio model evaluations.']);
         }
       } catch (error: any) {
-        console.error('Error running custom model evaluations:', error);
-        setErrors(['An error occurred while running custom model evaluations. Please try again.']);
+        console.error('Error running audio model evaluations:', error.response?.data || error.message);
+        setErrors(['An error occurred while running audio model evaluations. Please try again.']);
       } finally {
         setLoading(false);
       }
@@ -318,16 +416,14 @@ export default function PromptTestingPage() {
                                   if (modelType === 'simple') {
                                     return (
                                       <div>
-                                        <Label className="text-white text-lg mb-2 block">Upload Test Data JSON</Label>
+                                        <Label className="text-white text-lg mb-2 block">Upload Test Data File</Label>
                                         <div
                                           className="border-2 border-dashed border-gray-500 rounded-lg p-6 text-center cursor-pointer hover:border-gray-300 transition-colors"
                                           onDragOver={(e) => e.preventDefault()}
                                           onDrop={(e) => {
                                             e.preventDefault();
                                             if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                                              setFile(e.dataTransfer.files[0]);
-                                              setSuccess('File dropped successfully!');
-                                              setErrors([]);
+                                              handleFileChange({ target: { files: e.dataTransfer.files } } as React.ChangeEvent<HTMLInputElement>);
                                             }
                                           }}
                                         >
@@ -335,7 +431,7 @@ export default function PromptTestingPage() {
                                             type="file"
                                             className="hidden"
                                             onChange={handleFileChange}
-                                            accept=".json"
+                                            accept=".json,.csv"
                                             id="file-upload"
                                           />
                                           <Label htmlFor="file-upload" className="cursor-pointer">
@@ -344,7 +440,7 @@ export default function PromptTestingPage() {
                                               Drag and drop file here or click to upload
                                             </p>
                                             <p className="mt-1 text-xs text-gray-400">
-                                              Limit 200MB per file • JSON
+                                              Limit 200MB per file • JSON, CSV
                                             </p>
                                           </Label>
                                         </div>
@@ -418,114 +514,61 @@ export default function PromptTestingPage() {
                               <div className="space-y-6">
                                 <Label className="text-white text-lg mb-2 block">Upload Audio Files</Label>
                                 <div className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="prompt-audio" className="text-white text-sm mb-1 block">Prompt Audio</Label>
-                                    <div
-                                      className="border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
-                                      onDragOver={(e) => e.preventDefault()}
-                                      onDrop={(e) => {
-                                        e.preventDefault();
-                                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                                          // Handle prompt_audio upload
-                                          setSuccess('Prompt audio dropped successfully!');
-                                          setErrors([]);
-                                        }
-                                      }}
-                                    >
-                                      <Input
-                                        type="file"
-                                        id="prompt-audio"
-                                        accept=".mp3,.wav"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                          // Handle prompt_audio upload
-                                          setSuccess('Prompt audio uploaded successfully!');
-                                          setErrors([]);
-                                        }}
-                                      />
-                                      <Label htmlFor="prompt-audio" className="cursor-pointer">
-                                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                                        <p className="mt-1 text-sm text-white">
-                                          Drag and drop or click to upload Prompt Audio
-                                        </p>
-                                        <p className="mt-1 text-xs text-gray-400">
-                                          Limit 200MB per file • MP3, WAV
-                                        </p>
+                                  {['prompt', 'context', 'response'].map((type) => (
+                                    <div key={type}>
+                                      <Label htmlFor={`${type}-audio`} className="text-white text-sm mb-1 block">
+                                        {type.charAt(0).toUpperCase() + type.slice(1)} Audio
                                       </Label>
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="context-audio" className="text-white text-sm mb-1 block">Context Audio</Label>
-                                    <div
-                                      className="border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
-                                      onDragOver={(e) => e.preventDefault()}
-                                      onDrop={(e) => {
-                                        e.preventDefault();
-                                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                                          // Handle context_audio upload
-                                          setSuccess('Context audio dropped successfully!');
-                                          setErrors([]);
-                                        }
-                                      }}
-                                    >
-                                      <Input
-                                        type="file"
-                                        id="context-audio"
-                                        accept=".mp3,.wav"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                          // Handle context_audio upload
-                                          setSuccess('Context audio uploaded successfully!');
-                                          setErrors([]);
+                                      <div
+                                        className="border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                          e.preventDefault();
+                                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                                            const file = e.dataTransfer.files[0];
+                                            if (type === 'prompt') setPromptAudio(file);
+                                            if (type === 'context') setContextAudio(file);
+                                            if (type === 'response') setResponseAudio(file);
+                                            setSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} audio dropped successfully!`);
+                                            setErrors([]);
+                                          }
                                         }}
-                                      />
-                                      <Label htmlFor="context-audio" className="cursor-pointer">
-                                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                                        <p className="mt-1 text-sm text-white">
-                                          Drag and drop or click to upload Context Audio
+                                      >
+                                        <Input
+                                          type="file"
+                                          id={`${type}-audio`}
+                                          accept=".mp3,.wav"
+                                          className="hidden"
+                                          onChange={(e) => {
+                                            if (e.target.files && e.target.files[0]) {
+                                              const file = e.target.files[0];
+                                              if (type === 'prompt') setPromptAudio(file);
+                                              if (type === 'context') setContextAudio(file);
+                                              if (type === 'response') setResponseAudio(file);
+                                              setSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} audio uploaded successfully!`);
+                                              setErrors([]);
+                                            }
+                                          }}
+                                        />
+                                        <Label htmlFor={`${type}-audio`} className="cursor-pointer">
+                                          <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                                          <p className="mt-1 text-sm text-white">
+                                            Drag and drop or click to upload {type.charAt(0).toUpperCase() + type.slice(1)} Audio
+                                          </p>
+                                          <p className="mt-1 text-xs text-gray-400">
+                                            Limit 200MB per file • MP3, WAV
+                                          </p>
+                                        </Label>
+                                      </div>
+                                      {(type === 'prompt' && promptAudio) || 
+                                       (type === 'context' && contextAudio) || 
+                                       (type === 'response' && responseAudio) ? (
+                                        <p className="mt-2 text-sm text-white">
+                                          {type.charAt(0).toUpperCase() + type.slice(1)} audio selected
                                         </p>
-                                        <p className="mt-1 text-xs text-gray-400">
-                                          Limit 200MB per file • MP3, WAV
-                                        </p>
-                                      </Label>
+                                      ) : null}
                                     </div>
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="response-audio" className="text-white text-sm mb-1 block">Response Audio</Label>
-                                    <div
-                                      className="border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
-                                      onDragOver={(e) => e.preventDefault()}
-                                      onDrop={(e) => {
-                                        e.preventDefault();
-                                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                                          // Handle response_audio upload
-                                          setSuccess('Response audio dropped successfully!');
-                                          setErrors([]);
-                                        }
-                                      }}
-                                    >
-                                      <Input
-                                        type="file"
-                                        id="response-audio"
-                                        accept=".mp3,.wav"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                          // Handle response_audio upload
-                                          setSuccess('Response audio uploaded successfully!');
-                                          setErrors([]);
-                                        }}
-                                      />
-                                      <Label htmlFor="response-audio" className="cursor-pointer">
-                                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                                        <p className="mt-1 text-sm text-white">
-                                          Drag and drop or click to upload Response Audio
-                                        </p>
-                                        <p className="mt-1 text-xs text-gray-400">
-                                          Limit 200MB per file • MP3, WAV
-                                        </p>
-                                      </Label>
-                                    </div>
-                                  </div>
+                                  ))}
                                 </div>
                               </div>
                             )}
