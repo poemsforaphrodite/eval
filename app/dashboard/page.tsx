@@ -30,6 +30,8 @@ interface Evaluation {
     BiasDetection: { score: number; explanation: string };
   };
   evaluatedAt: string;
+  latency: number;
+  tokenCount?: number; // Add this line if it's not already present
 }
 
 // Update the Model interface to match the fetched model format
@@ -45,9 +47,11 @@ const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1).t
 
 // Add this interface for the summary data
 interface SummaryData {
-  totalTokens: number;
-  averageAccuracy: number;
   totalQueries: number;
+  averageLatency: number;
+  averageScores: {
+    [key: string]: number;
+  };
 }
 
 export default function Dashboard() {
@@ -66,9 +70,9 @@ export default function Dashboard() {
   const THRESHOLD = 0.6; // You can adjust this threshold as needed
   const tableRef = useRef<HTMLDivElement>(null);
   const [summaryData, setSummaryData] = useState<SummaryData>({
-    totalTokens: 0,
-    averageAccuracy: 0,
     totalQueries: 0,
+    averageLatency: 0,
+    averageScores: {},
   });
 
   useEffect(() => {
@@ -128,22 +132,35 @@ export default function Dashboard() {
 
       if (Array.isArray(data.evaluations)) {
         setEvaluations(data.evaluations);
+        
         // Calculate summary data
-        const totalTokens = data.evaluations.reduce((sum, evaluation) => {
-          if (evaluation.tokenCount !== undefined) {
-            return sum + evaluation.tokenCount;
-          }
-          // Fallback: estimate tokens based on prompt and response length
-          const estimatedTokens = (evaluation.prompt.length + evaluation.response.length) / 4; // Rough estimate
-          return sum + estimatedTokens;
-        }, 0);
-        const averageAccuracy = data.evaluations.reduce((sum, evaluation) => sum + evaluation.factors.Accuracy.score, 0) / data.evaluations.length;
-        setSummaryData({
-          totalTokens: Math.round(totalTokens), // Round to nearest whole number
-          averageAccuracy: parseFloat(averageAccuracy.toFixed(2)),
-          totalQueries: data.evaluations.length,
+        const totalLatency = data.evaluations.reduce((sum, evaluation) => sum + (evaluation.latency || 0), 0);
+        const averageLatency = totalLatency / data.evaluations.length;
+
+        // Calculate average scores for all factors
+        const factorSums: { [key: string]: number } = {};
+        data.evaluations.forEach((evaluation: Evaluation) => {
+          Object.entries(evaluation.factors).forEach(([factor, details]) => {
+            if (factorSums[factor]) {
+              factorSums[factor] += details.score;
+            } else {
+              factorSums[factor] = details.score;
+            }
+          });
         });
-        // Transform evaluations data for LineChart
+
+        const averageScores: { [key: string]: number } = {};
+        Object.entries(factorSums).forEach(([factor, sum]) => {
+          averageScores[factor] = parseFloat((sum / data.evaluations.length).toFixed(2));
+        });
+
+        setSummaryData({
+          totalQueries: data.evaluations.length,
+          averageLatency,
+          averageScores,
+        });
+
+        // Transform evaluations data for LineChart, now including latency
         const transformedData = data.evaluations.map((evalResult: Evaluation, index: number) => ({
           queryNumber: index + 1,
           Accuracy: evalResult.factors.Accuracy.score,
@@ -154,6 +171,7 @@ export default function Dashboard() {
           Precision: evalResult.factors.Precision.score,
           Consistency: evalResult.factors.Consistency.score,
           BiasDetection: evalResult.factors.BiasDetection.score,
+          Latency: evalResult.latency || 0, // Use 0 if latency is not available
         }));
         setChartData(transformedData);
       } else {
@@ -212,41 +230,40 @@ export default function Dashboard() {
         <div className="p-4">
           <h1 className="text-2xl font-bold text-purple-400 mb-6">AI Evaluation</h1>
         </div>
-        <nav className="flex-1">
-          <Link href="/dashboard">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
+        <nav className="flex-1 px-4 space-y-2">
+          <Link href="/dashboard" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-purple-400 py-4 text-lg transition-colors duration-200">
               Dashboard
             </Button>
           </Link>
-          <Link href="/prompt-testing">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
+          <Link href="/prompt-testing" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-purple-400 py-4 text-lg transition-colors duration-200">
               Prompt Testing
             </Button>
           </Link>
-          <Link href="/manage-models">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
+          <Link href="/manage-models" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-purple-400 py-4 text-lg transition-colors duration-200">
               Manage Models
             </Button>
           </Link>
-          <Link href="/umap">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
+          <Link href="/umap" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-purple-400 py-4 text-lg transition-colors duration-200">
               UMAP Visualization
             </Button>
           </Link>
-          {/* New: Worst Performing Slice tab */}
-          <Link href="/worst-performing-slices">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
+          <Link href="/worst-performing-slices" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-purple-400 py-4 text-lg transition-colors duration-200">
               Worst Performing Slices
             </Button>
           </Link>
         </nav>
         <div className="p-4">
           <Button
-            variant="ghost"
-            className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700"
+            variant="outline"
+            className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-purple-400 py-4 text-lg transition-colors duration-200"
             onClick={handleLogout}
           >
-            <LogOut className="w-4 h-4 mr-2" /> Logout
+            <LogOut className="w-5 h-5 mr-2" /> Logout
           </Button>
         </div>
       </aside>
@@ -311,6 +328,37 @@ export default function Dashboard() {
             </Card>
           </motion.div>
 
+          {/* Add Summary Box */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <Card className="mb-8 bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-purple-400">Evaluation Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold text-gray-300">Total Queries</h3>
+                    <p className="text-2xl font-bold text-purple-400">{summaryData.totalQueries}</p>
+                  </div>
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold text-gray-300">Avg Latency</h3>
+                    <p className="text-2xl font-bold text-purple-400">{summaryData.averageLatency.toFixed(2)} ms</p>
+                  </div>
+                  {Object.entries(summaryData.averageScores).map(([factor, score]) => (
+                    <div key={factor} className="bg-gray-700 p-4 rounded-lg">
+                      <h3 className="text-lg font-semibold text-gray-300">Avg {factor}</h3>
+                      <p className="text-2xl font-bold text-purple-400">{score.toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -319,7 +367,7 @@ export default function Dashboard() {
             <Card className="mb-8 bg-gray-800 border-gray-700">
               <CardHeader>
                 <CardTitle className="text-purple-400">Your Evaluation Results</CardTitle>
-                <CardDescription className="text-gray-400">Evaluation Scores per Query</CardDescription>
+                <CardDescription className="text-gray-400">Evaluation Scores and Latency per Query</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={400}>
@@ -327,24 +375,31 @@ export default function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="queryNumber" 
-                      label={{ value: 'Query Number', position: 'insideBottom', offset: -5 }} // Updated X-axis
+                      label={{ value: 'Query Number', position: 'insideBottom', offset: -5 }}
                     />
                     <YAxis 
+                      yAxisId="left"
                       domain={[0, 1]} 
                       allowDecimals={true} 
                       label={{ value: 'Score', angle: -90, position: 'insideLeft' }}
                       tickFormatter={(tick) => tick.toFixed(2)}
                     />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      label={{ value: 'Latency (ms)', angle: 90, position: 'insideRight' }}
+                    />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="Accuracy" stroke="#FF6B6B" strokeWidth={2} />
-                    <Line type="monotone" dataKey="Hallucination" stroke="#4ECDC4" strokeWidth={2} />
-                    <Line type="monotone" dataKey="Groundedness" stroke="#FFA500" strokeWidth={2} />
-                    <Line type="monotone" dataKey="Relevance" stroke="#45B7D1" strokeWidth={2} />
-                    <Line type="monotone" dataKey="Recall" stroke="#98D8C8" strokeWidth={2} />
-                    <Line type="monotone" dataKey="Precision" stroke="#F3A712" strokeWidth={2} />
-                    <Line type="monotone" dataKey="Consistency" stroke="#A364D9" strokeWidth={2} />
-                    <Line type="monotone" dataKey="BiasDetection" stroke="#FF9FF3" strokeWidth={2} />
+                    <Line yAxisId="left" type="monotone" dataKey="Accuracy" stroke="#FF6B6B" strokeWidth={2} />
+                    <Line yAxisId="left" type="monotone" dataKey="Hallucination" stroke="#4ECDC4" strokeWidth={2} />
+                    <Line yAxisId="left" type="monotone" dataKey="Groundedness" stroke="#FFA500" strokeWidth={2} />
+                    <Line yAxisId="left" type="monotone" dataKey="Relevance" stroke="#45B7D1" strokeWidth={2} />
+                    <Line yAxisId="left" type="monotone" dataKey="Recall" stroke="#98D8C8" strokeWidth={2} />
+                    <Line yAxisId="left" type="monotone" dataKey="Precision" stroke="#F3A712" strokeWidth={2} />
+                    <Line yAxisId="left" type="monotone" dataKey="Consistency" stroke="#A364D9" strokeWidth={2} />
+                    <Line yAxisId="left" type="monotone" dataKey="BiasDetection" stroke="#FF9FF3" strokeWidth={2} />
+                    <Line yAxisId="right" type="monotone" dataKey="Latency" stroke="#82ca9d" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -359,76 +414,55 @@ export default function Dashboard() {
           >
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-purple-400">Queries and Their Evaluation Scores</CardTitle>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    type="text"
-                    placeholder="Search queries..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="max-w-sm bg-gray-700 text-gray-100 border-gray-600 focus:border-purple-400"
-                  />
-                  <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-gray-700">
-                    <Search className="h-4 w-4" />
-                  </Button>
-                </div>
+                <CardTitle className="text-purple-400">Detailed Evaluation Results</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Showing {evaluations.length} evaluation results
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Add summary row */}
-                <div className="mb-4 p-4 bg-gray-700 rounded-md">
-                  <h3 className="text-lg font-semibold text-purple-400 mb-2">Summary</h3>
-                  <div className="grid grid-cols-3 gap-4 text-gray-300">
-                    <div>
-                      <span className="font-medium">Total Tokens:</span> {summaryData.totalTokens}
-                    </div>
-                    <div>
-                      <span className="font-medium">Average Accuracy:</span> {summaryData.averageAccuracy}
-                    </div>
-                    <div>
-                      <span className="font-medium">Total Queries:</span> {summaryData.totalQueries}
-                    </div>
-                  </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left text-gray-300">
+                    <thead className="text-xs uppercase bg-gray-700 text-gray-300">
+                      <tr>
+                        <th scope="col" className="px-6 py-3">Prompt</th>
+                        <th scope="col" className="px-6 py-3">Response</th>
+                        <th scope="col" className="px-6 py-3">Accuracy</th>
+                        <th scope="col" className="px-6 py-3">Hallucination</th>
+                        <th scope="col" className="px-6 py-3">Groundedness</th>
+                        <th scope="col" className="px-6 py-3">Relevance</th>
+                        <th scope="col" className="px-6 py-3">Recall</th>
+                        <th scope="col" className="px-6 py-3">Precision</th>
+                        <th scope="col" className="px-6 py-3">Consistency</th>
+                        <th scope="col" className="px-6 py-3">Bias Detection</th>
+                        <th scope="col" className="px-6 py-3">Latency (ms)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {evaluations.map((evalResult, idx) => (
+                        <TableRow 
+                          key={idx} 
+                          className={`border-b border-gray-700 ${
+                            Object.values(evalResult.factors).some(factor => factor.score < THRESHOLD)
+                              ? 'bg-red-900 bg-opacity-20'
+                              : ''
+                          }`}
+                        >
+                          <TableCell className="font-medium text-gray-300">{evalResult.prompt}</TableCell>
+                          <TableCell className="text-gray-300">{evalResult.response}</TableCell>
+                          <TableCell className="text-gray-300">{evalResult.factors.Accuracy.score}</TableCell>
+                          <TableCell className="text-gray-300">{evalResult.factors.Hallucination.score}</TableCell>
+                          <TableCell className="text-gray-300">{evalResult.factors.Groundedness.score}</TableCell>
+                          <TableCell className="text-gray-300">{evalResult.factors.Relevance.score}</TableCell>
+                          <TableCell className="text-gray-300">{evalResult.factors.Recall.score}</TableCell>
+                          <TableCell className="text-gray-300">{evalResult.factors.Precision.score}</TableCell>
+                          <TableCell className="text-gray-300">{evalResult.factors.Consistency.score}</TableCell>
+                          <TableCell className="text-gray-300">{evalResult.factors.BiasDetection.score}</TableCell>
+                          <TableCell className="text-gray-300">{evalResult.latency || 0}</TableCell>
+                        </TableRow>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-b border-gray-700">
-                      <TableHead className="text-gray-400">Query</TableHead>
-                      <TableHead className="text-gray-400">Accuracy</TableHead>
-                      <TableHead className="text-gray-400">Hallucination</TableHead>
-                      <TableHead className="text-gray-400">Groundedness</TableHead>
-                      <TableHead className="text-gray-400">Relevance</TableHead>
-                      <TableHead className="text-gray-400">Recall</TableHead>
-                      <TableHead className="text-gray-400">Precision</TableHead>
-                      <TableHead className="text-gray-400">Consistency</TableHead>
-                      <TableHead className="text-gray-400">Bias Detection</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {evaluations.map((evalResult, idx) => (
-                      <TableRow 
-                        key={idx} 
-                        className={`border-b border-gray-700 ${
-                          Object.values(evalResult.factors).some(factor => factor.score < THRESHOLD)
-                            ? 'bg-red-900 bg-opacity-20'
-                            : ''
-                        }`}
-                      >
-                        <TableCell className="font-medium text-gray-300">{evalResult.prompt}</TableCell>
-                        <TableCell className="text-gray-300">{evalResult.factors.Accuracy.score}</TableCell>
-                        <TableCell className="text-gray-300">{evalResult.factors.Hallucination.score}</TableCell>
-                        <TableCell className="text-gray-300">{evalResult.factors.Groundedness.score}</TableCell>
-                        <TableCell className="text-gray-300">{evalResult.factors.Relevance.score}</TableCell>
-                        <TableCell className="text-gray-300">{evalResult.factors.Recall.score}</TableCell>
-                        <TableCell className="text-gray-300">{evalResult.factors.Precision.score}</TableCell>
-                        <TableCell className="text-gray-300">{evalResult.factors.Consistency.score}</TableCell>
-                        <TableCell className="text-gray-300">{evalResult.factors.BiasDetection.score}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                {evaluations.length === 0 && !loading && (
-                  <p className="text-gray-400">No evaluations available for the selected model.</p>
-                )}
               </CardContent>
             </Card>
           </motion.div>

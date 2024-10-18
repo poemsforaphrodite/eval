@@ -34,9 +34,19 @@ interface EvaluationResult {
     Consistency: FactorEvaluation;
     BiasDetection: FactorEvaluation;
   };
+  evaluatedAt: Date;
+  latency: number; // Added latency field per evaluation
 }
 
-async function evaluateResponse(prompt: string, context: string, response: string, username: string, modelName: string): Promise<EvaluationResult | null> {
+async function evaluateResponse(
+  prompt: string,
+  context: string,
+  response: string,
+  username: string,
+  modelName: string
+): Promise<EvaluationResult | null> {
+  const evaluationStartTime = Date.now(); // Start time for this evaluation
+
   try {
     const evaluationPrompt = `
 Evaluate the following response based on the given prompt and context. 
@@ -101,6 +111,9 @@ Do not include any additional text, explanations, or markdown formatting.
         }
       }
 
+      const evaluationEndTime = Date.now(); // End time for this evaluation
+      const evaluationLatency = evaluationEndTime - evaluationStartTime; // Latency in milliseconds
+
       return {
         username,
         modelName,
@@ -117,6 +130,8 @@ Do not include any additional text, explanations, or markdown formatting.
           Consistency: FactorEvaluation;
           BiasDetection: FactorEvaluation;
         },
+        evaluatedAt: new Date(),
+        latency: evaluationLatency,
       };
     } catch (e) {
       console.error(`Error decoding evaluation response: ${e}`);
@@ -130,10 +145,9 @@ Do not include any additional text, explanations, or markdown formatting.
 }
 
 export async function POST(req: NextRequest) {
-  //console.log('Received POST request to /api/models/simple/evaluate');
+  // Removed overall request latency measurement
   try {
-    const { testData, username, modelName } = await req.json(); // Updated to extract username and modelName
-    //console.log('Received data:', testData);
+    const { testData, username, modelName } = await req.json(); // Ensure the frontend sends username and modelName
 
     if (!Array.isArray(testData)) {
       console.error('Invalid data format. Expected an array.');
@@ -163,6 +177,8 @@ export async function POST(req: NextRequest) {
             Consistency: { score: 0, explanation: 'Missing prompt, context, or response.' },
             BiasDetection: { score: 0, explanation: 'Missing prompt, context, or response.' },
           },
+          evaluatedAt: new Date(),
+          latency: 0, // Assign zero or appropriate value when evaluation is incomplete
         };
       }
 
@@ -186,23 +202,19 @@ export async function POST(req: NextRequest) {
             Consistency: { score: 0, explanation: 'Evaluation failed.' },
             BiasDetection: { score: 0, explanation: 'Evaluation failed.' },
           },
+          evaluatedAt: new Date(),
+          latency: 0, // Assign zero or appropriate value when evaluation fails
         };
       }
     });
-    //console.log('Evaluation promises:', evaluationPromises);
-    const results = await Promise.all(evaluationPromises);
 
-    // Add username and modelName to each result
-    const resultsWithMetadata = results.map(result => ({
-      ...result,
-      evaluatedAt: new Date(), // Optional: Add timestamp
-    }));
+    const results = await Promise.all(evaluationPromises);
 
     // Save evaluation results to MongoDB
     const db = await connectToDatabase();
-    await db.collection('evaluation_results').insertMany(resultsWithMetadata); // Insert modified results
+    await db.collection('evaluation_results').insertMany(results); // Insert individual results with their own latency
 
-    return NextResponse.json({ results: resultsWithMetadata }, { status: 200 });
+    return NextResponse.json({ results }, { status: 200 });
   } catch (error) {
     console.error('Error in POST function:', error);
     return NextResponse.json(

@@ -19,6 +19,26 @@ interface Model {
   model_type: string;
 }
 
+interface EvaluationResult {
+  username: string;
+  modelName: string;
+  prompt: string;
+  context: string;
+  response: string;
+  factors: {
+    Accuracy: { score: number; explanation: string };
+    Hallucination: { score: number; explanation: string };
+    Groundedness: { score: number; explanation: string };
+    Relevance: { score: number; explanation: string };
+    Recall: { score: number; explanation: string };
+    Precision: { score: number; explanation: string };
+    Consistency: { score: number; explanation: string };
+    BiasDetection: { score: number; explanation: string };
+  };
+  evaluatedAt: string; // Assuming backend returns ISO string
+  latency: number; // Latency in milliseconds
+}
+
 export default function PromptTestingPage() {
   const router = useRouter();
   const [username, setUsername] = useState<string>('');
@@ -52,6 +72,9 @@ export default function PromptTestingPage() {
   const [contextImage, setContextImage] = useState<File | null>(null);
   const [responseImage, setResponseImage] = useState<File | null>(null);
 
+  // Update the results state to handle multiple sets of results
+  const [allResults, setAllResults] = useState<EvaluationResult[][]>([]);
+
   useEffect(() => {
     const user = Cookies.get('username');
     if (user) {
@@ -84,6 +107,7 @@ export default function PromptTestingPage() {
     setQuestionsJson(null);
     setSuccess('');
     setErrors([]);
+    setAllResults([]); // Reset previous results
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,164 +207,89 @@ export default function PromptTestingPage() {
   const handleRunTest = async () => {
     setErrors([]);
     setSuccess('');
+    setLoading(true);
 
-    if (!selectedModel) {
-      setErrors(['Please select a valid model.']);
-      return;
-    }
+    try {
+      let responseData;
 
-    console.log('Selected model:', selectedModel);
-    const modelType = selectedModel.split(' (')[1].replace(')', '').toLowerCase();
-    console.log('Model type:', modelType);
+      if (inputType === 'text') {
+        const modelType = selectedModel.split(' (')[1].replace(')', '').toLowerCase();
+        if (modelType === 'simple') {
+          if (!file) {
+            setErrors(['Please upload a valid test data JSON file.']);
+            setLoading(false);
+            return;
+          }
 
-    if (inputType === 'text') {
-      if (modelType === 'simple') {
-        if (!file) {
-          setErrors(['Please upload a valid test data JSON file.']);
-          return;
-        }
-        try {
-          const reader = new FileReader();
-          reader.onload = async () => {
-            try {
-              const testData = JSON.parse(reader.result as string);
-              console.log('Parsed JSON data:', testData);
-              setLoading(true);
-              const apiUrl = `/api/models/simple`;
-              console.log('API URL:', apiUrl);
-              const response = await axios.post(apiUrl, { testData, username, modelName: selectedModel });
-              console.log('API response:', response);
-              setSuccess('Simple model evaluations completed successfully.');
-              // You can add more logic here to handle the evaluation results
-            } catch (error) {
-              console.error('Error in API call or JSON parsing:', error);
-              setErrors(['Invalid JSON format or API error. Please check your file and try again.']);
-            } finally {
-              setLoading(false);
-            }
-          };
-          reader.readAsText(file);
-        } catch (error) {
-          console.error('Error processing uploaded file:', error);
-          setErrors(['Failed to process the uploaded file.']);
-        }
-      } else if (modelType === 'custom' || modelType === 'huggingface') {
-        if (!promptJson || !contextTxt) {
-          setErrors(['Please upload both Prompt JSON and Context TXT files.']);
-          return;
-        }
+          const formData = new FormData();
+          formData.append('testData', file);
+          formData.append('username', username);
+          formData.append('modelName', selectedModel);
 
-        try {
-          setLoading(true);
-          const response = await axios.post('/api/models/custom', {
+          responseData = await axios.post('/api/models/simple', {
+            testData: await file.text().then(text => JSON.parse(text)),
+            username,
+            modelName: selectedModel,
+          });
+        } else if (modelType === 'custom' || modelType === 'huggingface') {
+          if (!promptJson || !contextTxt) {
+            setErrors(['Please upload both Prompt JSON and Context TXT files.']);
+            setLoading(false);
+            return;
+          }
+
+          responseData = await axios.post('/api/models/custom', {
             username,
             modelName: selectedModel,
             promptJson,
             contextTxt,
+            questionsJson,
           });
-
-          if (response.data.success) {
-            setSuccess('Custom model evaluations are running successfully.');
-          } else {
-            setErrors([response.data.message || 'Failed to run custom model evaluations.']);
-          }
-        } catch (error: any) {
-          console.error('Error running custom model evaluations:', error);
-          setErrors(['An error occurred while running custom model evaluations. Please try again.']);
-        } finally {
+        }
+      } else if (inputType === 'audio') {
+        if (!promptAudio || !contextAudio || !responseAudio) {
+          setErrors(['Please upload all three audio files (prompt, context, and response).']);
           setLoading(false);
+          return;
         }
-      }
-    } else if (inputType === 'audio') {
-      if (!promptAudio || !contextAudio || !responseAudio) {
-        setErrors(['Please upload all three audio files (prompt, context, and response).']);
-        return;
-      }
 
-      try {
-        setLoading(true);
-
-        // Transcribe audio files
-        const transcribeAudio = async (file: File, type: string) => {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('type', type);
-          const response = await axios.post('/api/transcribe', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
-          return response.data.text;
-        };
-
-        const [promptText, contextText, responseText] = await Promise.all([
-          transcribeAudio(promptAudio, 'prompt'),
-          transcribeAudio(contextAudio, 'context'),
-          transcribeAudio(responseAudio, 'response'),
-        ]);
-
-        console.log('Transcribed texts:', { promptText, contextText, responseText });
-
-        // Send transcribed data to the audio model evaluation endpoint
-        const response = await axios.post('/api/models/audio', {
+        // Assuming there's an endpoint to handle audio input
+        responseData = await axios.post('/api/models/audio', {
           username,
           modelName: selectedModel,
-          prompt: promptText,
-          context: contextText,
-          response: responseText,
+          promptAudio,
+          contextAudio,
+          responseAudio,
         });
-
-        if (response.data.success) {
-          setSuccess('Audio model evaluations completed successfully.');
-          setTranscriptions({ prompt: promptText, context: contextText, response: responseText });
-        } else {
-          setErrors([response.data.error || 'Failed to run audio model evaluations.']);
+      } else if (inputType === 'image') {
+        if (!promptImage || !contextImage || !responseImage) {
+          setErrors(['Please upload all three image files (prompt, context, and response).']);
+          setLoading(false);
+          return;
         }
-      } catch (error: any) {
-        console.error('Error running audio model evaluations:', error.response?.data || error.message);
-        setErrors(['An error occurred while running audio model evaluations. Please try again.']);
-      } finally {
-        setLoading(false);
-      }
-    } else if (inputType === 'image') {
-      if (!promptImage || !contextImage || !responseImage) {
-        setErrors(['Please upload all three image files (prompt, context, and response).']);
-        return;
-      }
 
-      try {
-        setLoading(true);
-
-        // Encode images to base64
-        const [promptBase64, contextBase64, responseBase64] = await Promise.all([
-          encodeImage(promptImage),
-          encodeImage(contextImage),
-          encodeImage(responseImage)
-        ]);
-
-        // Send encoded images to the image model evaluation endpoint
-        const response = await axios.post('/api/models/image', {
+        // Assuming there's an endpoint to handle image input
+        responseData = await axios.post('/api/models/image', {
           username,
           modelName: selectedModel,
-          promptImage: promptBase64,
-          contextImage: contextBase64,
-          responseImage: responseBase64,
+          promptImage: await encodeImage(promptImage),
+          contextImage: await encodeImage(contextImage),
+          responseImage: await encodeImage(responseImage),
         });
-
-        if (response.data.success) {
-          setSuccess('Image evaluation completed successfully.');
-          console.log('Image evaluation result:', response.data.result);
-        } else {
-          setErrors([response.data.error || 'Failed to run image evaluation.']);
-        }
-      } catch (error: any) {
-        console.error('Error running image evaluation:', error.response?.data || error.message);
-        setErrors(['An error occurred while running image evaluation. Please try again.']);
-      } finally {
-        setLoading(false);
       }
-    }
 
-    if (!loading && !errors.length) {
-      setSuccess('Evaluations completed. You can now view the results.');
+      if (responseData && responseData.data && responseData.data.results) {
+        // Update to handle the new results
+        setAllResults(prevResults => [...prevResults, responseData.data.results]);
+        setSuccess('Evaluations completed. You can now view the results.');
+      } else {
+        setErrors(['Unexpected response from the server.']);
+      }
+    } catch (error: any) {
+      console.error('Error running tests:', error.response?.data || error.message);
+      setErrors(['An error occurred while running evaluations. Please try again.']);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -787,6 +736,36 @@ export default function PromptTestingPage() {
                       return null;
                     })()}
                   </>
+                )}
+
+                {/* Display Evaluation Results with Individual Latency */}
+                {allResults.length > 0 && (
+                  <CardContent className="space-y-8">
+                    {allResults.map((resultSet, setIdx) => (
+                      <Card key={setIdx} className="bg-gray-700 border-gray-600 shadow-md">
+                        <CardHeader>
+                          <CardTitle className="text-xl font-bold text-white">Evaluation Set {setIdx + 1}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4 overflow-y-auto max-h-96">
+                          {resultSet.map((result, idx) => (
+                            <div key={idx} className="border-b border-gray-600 pb-4">
+                              <h3 className="text-lg font-semibold text-white">Prompt: {result.prompt}</h3>
+                              <p className="text-gray-300">Response: {result.response}</p>
+                              <p className="text-gray-400">Latency: {result.latency} ms</p>
+                              <div className="mt-2">
+                                {Object.entries(result.factors).map(([factor, evaluation], factorIdx) => (
+                                  <div key={factorIdx} className="mt-1">
+                                    <span className="text-gray-300 font-medium">{factor}:</span> {evaluation.score} - {evaluation.explanation}
+                                  </div>
+                                ))}
+                              </div>
+                              <p className="text-gray-500 text-sm">Evaluated At: {new Date(result.evaluatedAt).toLocaleString()}</p>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </CardContent>
                 )}
               </CardContent>
             </Card>

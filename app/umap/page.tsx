@@ -464,15 +464,23 @@ export default function UMAPPage() {
                       width: 800, // Changed from '100%' to a number
                       height: 600,
                       title: 'UMAP Visualization',
+                      titlefont: { color: '#FFFFFF' }, // Set title color to white
                       legend: { 
                         x: 1,
-                        y: 1
+                        y: 1,
+                        font: { color: '#FFFFFF' } // Set legend font color to white
                       },
+                      plot_bgcolor: '#000000', // Set plot background to black
+                      paper_bgcolor: '#000000', // Set paper background to black
+                      font: { color: '#FFFFFF' }, // Set default font color to white
                       scene: nComponents === 3 ? {
-                        xaxis: { title: 'UMAP 1' },
-                        yaxis: { title: 'UMAP 2' },
-                        zaxis: { title: 'UMAP 3' }
-                      } : undefined
+                        xaxis: { title: 'UMAP 1', color: '#FFFFFF', gridcolor: '#444444', zerolinecolor: '#444444' },
+                        yaxis: { title: 'UMAP 2', color: '#FFFFFF', gridcolor: '#444444', zerolinecolor: '#444444' },
+                        zaxis: { title: 'UMAP 3', color: '#FFFFFF', gridcolor: '#444444', zerolinecolor: '#444444' }
+                      } : {
+                        xaxis: { title: 'UMAP 1', color: '#FFFFFF', gridcolor: '#444444', zerolinecolor: '#444444' },
+                        yaxis: { title: 'UMAP 2', color: '#FFFFFF', gridcolor: '#444444', zerolinecolor: '#444444' }
+                      }
                     }}
                     config={{
                       responsive: true
