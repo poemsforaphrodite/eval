@@ -22,7 +22,6 @@ export async function POST(request: Request) {
   if (passwordMatch) {
     return NextResponse.json({ message: 'Login successful', username: user.username }, { status: 200 });
   }
-
   // TODO: Generate and return a JWT token for authentication
 
   return NextResponse.json({ message: 'Login successful' }, { status: 200 });

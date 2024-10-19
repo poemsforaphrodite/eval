@@ -6,6 +6,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const username = searchParams.get('username');
   const modelName = searchParams.get('model_name'); // Keep as 'model_name' for query parameter
+  const timeRange = searchParams.get('timeRange') || 'day';
 
   if (!username) {
     return NextResponse.json(
@@ -23,11 +24,34 @@ export async function GET(req: NextRequest) {
 
   try {
     const db = await connectToDatabase();
-    console.log(modelName);
-    console.log(username);
+    
+    // Calculate the start date based on the time range
+    const now = new Date();
+    let startDate;
+    switch (timeRange) {
+      case 'hour':
+        startDate = new Date(now.getTime() - 60 * 60 * 1000);
+        break;
+      case 'day':
+        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Default to last day
+    }
+
     const evaluations = await db
       .collection('evaluation_results')
-      .find({ username, modelName: modelName }) // Use 'modelName' to match DB field
+      .find({
+        username,
+        modelName: modelName,
+        evaluatedAt: { $gte: startDate }
+      })
       .sort({ evaluatedAt: -1 }) // Optional: Sort by most recent
       .toArray();
 

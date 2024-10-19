@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 import bcrypt from 'bcrypt';
+import { generateApiKey } from '@/lib/mongodb';
 
 export async function POST(request: Request) {
   const { username, password } = await request.json();
@@ -19,9 +20,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'User already exists' }, { status: 409 });
   }
 
-  // Hash password and create new user
-  const hashedPassword = await bcrypt.hash(password, 10);
-  await users.insertOne({ username, password: hashedPassword });
+  // Generate API key
+  const apiKey = generateApiKey();
 
-  return NextResponse.json({ message: 'User created successfully' }, { status: 201 });
+  // Hash password and create new user with API key
+  const hashedPassword = await bcrypt.hash(password, 10);
+  await users.insertOne({ username, password: hashedPassword, apiKey });
+
+  return NextResponse.json({ message: 'User created successfully', apiKey }, { status: 201 });
 }

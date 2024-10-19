@@ -6,7 +6,7 @@ import Cookies from 'js-cookie';
 import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, BarChart } from "lucide-react";
+import { LogOut, Menu, LayoutDashboard, TestTube, Settings, Map, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -131,70 +131,69 @@ export default function WorstPerformingSlicesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex">
+    <div className="min-h-screen bg-gray-950 text-gray-100 flex">
       {/* Sidebar */}
-      <aside className={`bg-gray-800 w-64 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static z-30`}>
+      <aside className={`bg-gray-900 w-72 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static z-30`}>
         <div className="p-4">
           <h1 className="text-2xl font-bold text-purple-400 mb-6">AI Evaluation</h1>
         </div>
-        <nav className="flex-1">
-          <Link href="/dashboard">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
-              Dashboard
+        <nav className="flex-1 px-4 space-y-2">
+          <Link href="/dashboard" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <LayoutDashboard className="w-5 h-5 mr-2" /> Dashboard
             </Button>
           </Link>
-          <Link href="/prompt-testing">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
-              Prompt Testing
+          <Link href="/prompt-testing" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <TestTube className="w-5 h-5 mr-2" /> Prompt Testing
             </Button>
           </Link>
-          <Link href="/manage-models">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
-              Manage Models
+          <Link href="/manage-models" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <Settings className="w-5 h-5 mr-2" /> Manage Models
             </Button>
           </Link>
-          <Link href="/umap">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
-              UMAP Visualization
+          <Link href="/umap" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <Map className="w-5 h-5 mr-2" /> UMAP Visualization
             </Button>
           </Link>
-          <Link href="/worst-performing-slices">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
-              <BarChart className="w-4 h-4 mr-2" />
-              Worst Performing Slices
+          <Link href="/worst-performing-slices" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <TrendingDown className="w-5 h-5 mr-2" /> Worst Performing Slices
             </Button>
           </Link>
         </nav>
         <div className="p-4">
           <Button
-            variant="ghost"
-            className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700"
+            variant="outline"
+            className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200"
             onClick={handleLogout}
           >
-            <LogOut className="w-4 h-4 mr-2" /> Logout
+            <LogOut className="w-5 h-5 mr-2" /> Logout
           </Button>
         </div>
       </aside>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className="bg-gray-800 shadow-lg lg:hidden">
+        <header className="bg-gray-900 shadow-lg lg:hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-purple-400">AI Evaluation Dashboard - Worst Performing Slices</h1>
+            <h1 className="text-2xl font-bold text-purple-400">AI Evaluation Dashboard</h1>
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu className="h-6 w-6 text-gray-300" />
             </Button>
           </div>
         </header>
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <Card className="mb-8 bg-gray-800 border-gray-700">
+            <Card className="mb-8 bg-gray-800 border-gray-700 shadow-lg">
               <CardHeader>
-                <CardTitle className="text-purple-400">Select Model</CardTitle>
+                <CardTitle className="text-2xl font-bold text-white">Select Model</CardTitle>
               </CardHeader>
               <CardContent>
                 <Select onValueChange={handleModelChange} value={selectedModelName}>
@@ -212,10 +211,10 @@ export default function WorstPerformingSlicesPage() {
               </CardContent>
             </Card>
 
-            <Card className="mb-8 bg-gray-800 border-gray-700">
+            <Card className="mb-8 bg-gray-800 border-gray-700 shadow-lg">
               <CardHeader>
-                <CardTitle className="text-purple-400">Metric Performance</CardTitle>
-                <CardDescription className="text-gray-400">
+                <CardTitle className="text-2xl font-bold text-white">Metric Performance</CardTitle>
+                <CardDescription className="text-gray-300">
                   This section shows the performance of all metrics for the selected model.
                 </CardDescription>
               </CardHeader>
@@ -256,9 +255,9 @@ export default function WorstPerformingSlicesPage() {
                     </Table>
 
                     {selectedMetric && (
-                      <Card className="mt-8 bg-gray-800 border-gray-700">
+                      <Card className="mt-8 bg-gray-800 border-gray-700 shadow-lg">
                         <CardHeader>
-                          <CardTitle className="text-purple-400">{selectedMetric} - Detailed View</CardTitle>
+                          <CardTitle className="text-2xl font-bold text-white">{selectedMetric} - Detailed View</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <Table>

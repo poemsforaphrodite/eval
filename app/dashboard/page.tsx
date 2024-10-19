@@ -8,10 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts'; // Updated Recharts components
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { LogOut, Search, Menu, AlertCircle } from "lucide-react"
+import { LogOut, Search, Menu, AlertCircle, LayoutDashboard, TestTube, Settings, Map, TrendingDown } from "lucide-react"
 import { motion } from "framer-motion"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Key } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 interface Evaluation {
   username: string;
@@ -74,12 +77,16 @@ export default function Dashboard() {
     averageLatency: 0,
     averageScores: {},
   });
+  const [timeRange, setTimeRange] = useState<'hour' | 'day' | 'week' | 'month'>('day');
+  const [apiKey, setApiKey] = useState<string>('');
+  const [showApiKey, setShowApiKey] = useState(false);
 
   useEffect(() => {
     const storedUsername = Cookies.get('username');
     if (storedUsername) {
       setUsername(storedUsername);
       fetchModels(storedUsername);
+      fetchApiKey(storedUsername);
     } else {
       router.push('/login');
     }
@@ -89,7 +96,7 @@ export default function Dashboard() {
     if (username && selectedModelName) {
       fetchEvaluations(username);
     }
-  }, [username, selectedModelName]);
+  }, [username, selectedModelName, timeRange]);
 
   useEffect(() => {
     const lowScores = evaluations.filter(evaluation => 
@@ -127,7 +134,7 @@ export default function Dashboard() {
         model => `${model.model_name} (${capitalize(model.model_type)})` === selectedModelName
       );
       const modelIdentifier = selectedModel ? `${selectedModel.model_name} (${capitalize(selectedModel.model_type)})` : '';
-      const response = await fetch(`/api/evaluations?username=${user}&model_name=${encodeURIComponent(modelIdentifier)}`);
+      const response = await fetch(`/api/evaluations?username=${user}&model_name=${encodeURIComponent(modelIdentifier)}&timeRange=${timeRange}`);
       const data = await response.json();
 
       if (Array.isArray(data.evaluations)) {
@@ -219,48 +226,75 @@ export default function Dashboard() {
     tableRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const fetchApiKey = async (user: string) => {
+    try {
+      const response = await fetch(`/api/get-api-key?username=${encodeURIComponent(user)}`);
+      const data = await response.json();
+      if (data.success) {
+        setApiKey(data.apiKey);
+      } else {
+        setErrors([data.message]);
+      }
+    } catch (error) {
+      console.error('Error fetching API key:', error);
+      setErrors(['Failed to fetch API key.']);
+    }
+  };
+
+  const handleCloseApiKeyModal = () => {
+    setShowApiKey(false);
+  };
+
   if (!username) {
     return null; // or a loading spinner
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex">
+    <div className="min-h-screen bg-gray-950 text-gray-100 flex">
       {/* Sidebar */}
-      <aside className={`bg-gray-800 w-64 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static z-30`}>
+      <aside className={`bg-gray-900 w-72 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static z-30`}>
         <div className="p-4">
           <h1 className="text-2xl font-bold text-purple-400 mb-6">AI Evaluation</h1>
         </div>
         <nav className="flex-1 px-4 space-y-2">
           <Link href="/dashboard" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-purple-400 py-4 text-lg transition-colors duration-200">
-              Dashboard
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <LayoutDashboard className="w-5 h-5 mr-2" /> Dashboard
             </Button>
           </Link>
           <Link href="/prompt-testing" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-purple-400 py-4 text-lg transition-colors duration-200">
-              Prompt Testing
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <TestTube className="w-5 h-5 mr-2" /> Prompt Testing
             </Button>
           </Link>
           <Link href="/manage-models" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-purple-400 py-4 text-lg transition-colors duration-200">
-              Manage Models
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <Settings className="w-5 h-5 mr-2" /> Manage Models
             </Button>
           </Link>
           <Link href="/umap" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-purple-400 py-4 text-lg transition-colors duration-200">
-              UMAP Visualization
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <Map className="w-5 h-5 mr-2" /> UMAP Visualization
             </Button>
           </Link>
           <Link href="/worst-performing-slices" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-purple-400 py-4 text-lg transition-colors duration-200">
-              Worst Performing Slices
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <TrendingDown className="w-5 h-5 mr-2" /> Worst Performing Slices
             </Button>
           </Link>
+          {/* Add the API Key button here */}
+          <Button 
+            variant="outline" 
+            className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200"
+            onClick={() => setShowApiKey(true)}
+          >
+            <Key className="w-5 h-5 mr-2" /> API Key
+          </Button>
         </nav>
         <div className="p-4">
           <Button
             variant="outline"
-            className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-purple-400 py-4 text-lg transition-colors duration-200"
+            className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-lg transition-colors duration-200"
             onClick={handleLogout}
           >
             <LogOut className="w-5 h-5 mr-2" /> Logout
@@ -270,7 +304,7 @@ export default function Dashboard() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className="bg-gray-800 shadow-lg lg:hidden">
+        <header className="bg-gray-900 shadow-lg lg:hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <h1 className="text-2xl font-bold text-purple-400">AI Evaluation Dashboard</h1>
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
@@ -300,13 +334,13 @@ export default function Dashboard() {
         )}
 
         <main className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* New: Available Models selection */}
+          {/* Remove the Tabs component and keep only the dashboard content */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Card className="mb-8 bg-gray-800 border-gray-700">
+            <Card className="mb-8 bg-gray-900 border-gray-800">
               <CardHeader>
                 <CardTitle className="text-purple-400">Available Models</CardTitle>
                 <CardDescription className="text-gray-400">Select a model to view its evaluation results.</CardDescription>
@@ -334,7 +368,7 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Card className="mb-8 bg-gray-800 border-gray-700">
+            <Card className="mb-8 bg-gray-900 border-gray-800">
               <CardHeader>
                 <CardTitle className="text-purple-400">Evaluation Summary</CardTitle>
               </CardHeader>
@@ -364,10 +398,25 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
-            <Card className="mb-8 bg-gray-800 border-gray-700">
+            <Card className="mb-8 bg-gray-900 border-gray-800">
               <CardHeader>
-                <CardTitle className="text-purple-400">Your Evaluation Results</CardTitle>
-                <CardDescription className="text-gray-400">Evaluation Scores and Latency per Query</CardDescription>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-purple-400">Your Evaluation Results</CardTitle>
+                    <CardDescription className="text-gray-400">Evaluation Scores and Latency per Query</CardDescription>
+                  </div>
+                  <Select onValueChange={(value: 'hour' | 'day' | 'week' | 'month') => setTimeRange(value)}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select time range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hour">Last Hour</SelectItem>
+                      <SelectItem value="day">Last Day</SelectItem>
+                      <SelectItem value="week">Last Week</SelectItem>
+                      <SelectItem value="month">Last Month</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={400}>
@@ -412,7 +461,7 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
           >
-            <Card className="bg-gray-800 border-gray-700">
+            <Card className="bg-gray-900 border-gray-800">
               <CardHeader>
                 <CardTitle className="text-purple-400">Detailed Evaluation Results</CardTitle>
                 <CardDescription className="text-gray-400">
@@ -476,6 +525,28 @@ export default function Dashboard() {
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
+
+      {/* API Key Modal */}
+      <Dialog open={showApiKey} onOpenChange={handleCloseApiKeyModal}>
+        <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-purple-400 flex items-center">
+              <Key className="mr-2" /> Your API Key
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Use this API key to authenticate your requests to the LLM Evaluation System.
+            </DialogDescription>
+          </DialogHeader>
+          <CardContent>
+            <div className="bg-gray-800 p-4 rounded-md">
+              <code className="text-purple-400 break-all">{apiKey}</code>
+            </div>
+            <p className="mt-4 text-gray-300 text-sm">
+              Keep this key secret. Do not share it or expose it in client-side code.
+            </p>
+          </CardContent>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

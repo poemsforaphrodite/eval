@@ -9,7 +9,7 @@ import { UMAP } from 'umap-js';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, BarChart } from "lucide-react";
+import { LogOut, Menu, BarChart, LayoutDashboard, TestTube, Settings, Map, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import Clusterer from 'density-clustering'; // Import density-clustering
@@ -256,72 +256,69 @@ export default function UMAPPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex">
+    <div className="min-h-screen bg-gray-950 text-gray-100 flex">
       {/* Sidebar */}
-      <aside className={`bg-gray-800 w-64 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static z-30`}>
+      <aside className={`bg-gray-900 w-72 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static z-30`}>
         <div className="p-4">
           <h1 className="text-2xl font-bold text-purple-400 mb-6">AI Evaluation</h1>
         </div>
-        <nav className="flex-1">
-          <Link href="/dashboard">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
-              Dashboard
+        <nav className="flex-1 px-4 space-y-2">
+          <Link href="/dashboard" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <LayoutDashboard className="w-5 h-5 mr-2" /> Dashboard
             </Button>
           </Link>
-          <Link href="/prompt-testing">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
-              Prompt Testing
+          <Link href="/prompt-testing" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <TestTube className="w-5 h-5 mr-2" /> Prompt Testing
             </Button>
           </Link>
-          <Link href="/manage-models">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
-              Manage Models
+          <Link href="/manage-models" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <Settings className="w-5 h-5 mr-2" /> Manage Models
             </Button>
           </Link>
-          <Link href="/umap">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
-              UMAP Visualization
+          <Link href="/umap" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <Map className="w-5 h-5 mr-2" /> UMAP Visualization
             </Button>
           </Link>
-          {/* Add this new button */}
-          <Link href="/worst-performing-slices">
-            <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
-              <BarChart className="w-4 h-4 mr-2" />
-              Worst Performing Slices
+          <Link href="/worst-performing-slices" className="block">
+            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+              <TrendingDown className="w-5 h-5 mr-2" /> Worst Performing Slices
             </Button>
           </Link>
         </nav>
         <div className="p-4">
           <Button
-            variant="ghost"
-            className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700"
+            variant="outline"
+            className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200"
             onClick={handleLogout}
           >
-            <LogOut className="w-4 h-4 mr-2" /> Logout
+            <LogOut className="w-5 h-5 mr-2" /> Logout
           </Button>
         </div>
       </aside>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className="bg-gray-800 shadow-lg lg:hidden">
+        <header className="bg-gray-900 shadow-lg lg:hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-purple-400">AI Evaluation Dashboard - UMAP Visualization</h1>
+            <h1 className="text-2xl font-bold text-purple-400">AI Evaluation Dashboard</h1>
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu className="h-6 w-6 text-gray-300" />
             </Button>
           </div>
         </header>
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Existing content goes here */}
+        <main className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <Card className="mb-8 bg-gray-800 border-gray-700">
+            <Card className="mb-8 bg-gray-800 border-gray-700 shadow-lg">
               <CardHeader>
-                <CardTitle className="text-purple-400">Select Model</CardTitle>
+                <CardTitle className="text-2xl font-bold text-white">Select Model</CardTitle>
               </CardHeader>
               <CardContent>
                 <select
@@ -339,10 +336,9 @@ export default function UMAPPage() {
               </CardContent>
             </Card>
             
-            {/* {{ edit_22 }} Add UMAP Functionality Controls */}
-            <Card className="mb-8 bg-gray-800 border-gray-700">
+            <Card className="mb-8 bg-gray-800 border-gray-700 shadow-lg">
               <CardHeader>
-                <CardTitle className="text-purple-400">UMAP Visualization with Clustering</CardTitle>
+                <CardTitle className="text-2xl font-bold text-white">UMAP Visualization with Clustering</CardTitle>
               </CardHeader>
               <CardContent>
                 {evaluations.length > 2 ? (
@@ -433,10 +429,10 @@ export default function UMAPPage() {
               </CardContent>
             </Card>
 
-            <Card className="mb-8 bg-gray-800 border-gray-700">
+            <Card className="mb-8 bg-gray-800 border-gray-700 shadow-lg">
               <CardHeader>
-                <CardTitle className="text-purple-400">UMAP Visualization of Evaluation Data</CardTitle>
-                <CardDescription className="text-gray-400">
+                <CardTitle className="text-2xl font-bold text-white">UMAP Visualization of Evaluation Data</CardTitle>
+                <CardDescription className="text-gray-300">
                   This visualization reduces the dimensionality of your evaluation scores to help identify patterns and clusters.
                 </CardDescription>
               </CardHeader>
@@ -493,9 +489,9 @@ export default function UMAPPage() {
 
             {/* Cluster Analysis Section */}
             {umapData.length > 0 && (
-              <Card className="mb-8 bg-gray-800 border-gray-700">
+              <Card className="mb-8 bg-gray-800 border-gray-700 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-purple-400">Cluster Analysis</CardTitle>
+                  <CardTitle className="text-2xl font-bold text-white">Cluster Analysis</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {/* Cluster Summary */}

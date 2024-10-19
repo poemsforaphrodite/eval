@@ -1,4 +1,5 @@
 import { MongoClient, Db } from 'mongodb';
+import crypto from 'crypto';
 
 const uri = process.env.MONGODB_URI!;
 let client: MongoClient;
@@ -32,4 +33,9 @@ export async function getDatabase(): Promise<Db> {
 // Add this new function
 export async function connectToDatabase(): Promise<Db> {
   return getDatabase();
+}
+
+// Update this function to generate API keys without database interaction
+export function generateApiKey(): string {
+  return crypto.randomBytes(32).toString('hex');
 }
