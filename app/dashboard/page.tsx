@@ -58,6 +58,12 @@ interface SummaryData {
   };
 }
 
+// Add this helper function at the top of your file, outside of the component
+const truncateText = (text: string, maxLength: number = 50) => {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + '...';
+};
+
 export default function Dashboard() {
   const router = useRouter();
   const [username, setUsername] = useState<string | undefined>('');
@@ -427,7 +433,7 @@ export default function Dashboard() {
                     <thead className="text-xs uppercase bg-gray-700 text-gray-300">
                       <tr>
                         <th scope="col" className="px-6 py-3">Prompt</th>
-                        <th scope="col" className="px-6 py-3">Response</th>
+                        <th scope="col" className="px-6 py-3">Response (Truncated)</th>
                         <th scope="col" className="px-6 py-3">Accuracy</th>
                         <th scope="col" className="px-6 py-3">Hallucination</th>
                         <th scope="col" className="px-6 py-3">Groundedness</th>
@@ -449,8 +455,8 @@ export default function Dashboard() {
                               : ''
                           }`}
                         >
-                          <TableCell className="font-medium text-gray-300">{evalResult.prompt}</TableCell>
-                          <TableCell className="text-gray-300">{evalResult.response}</TableCell>
+                          <TableCell className="font-medium text-gray-300">{truncateText(evalResult.prompt)}</TableCell>
+                          <TableCell className="text-gray-300">{truncateText(evalResult.response)}</TableCell>
                           <TableCell className="text-gray-300">{evalResult.factors.Accuracy.score}</TableCell>
                           <TableCell className="text-gray-300">{evalResult.factors.Hallucination.score}</TableCell>
                           <TableCell className="text-gray-300">{evalResult.factors.Groundedness.score}</TableCell>

@@ -143,14 +143,7 @@ export async function POST(request: Request) {
     }
 
     // Fetch the model details from the database
-    const db = await connectToDatabase();
-    const model = await db.collection('models').findOne({ model_name: modelName, username });
-
-    if (!model) {
-      return NextResponse.json({ error: 'Model not found' }, { status: 404 });
-    }
-
-    const modelId = model.model_id;
+    const modelId = username + modelName;
 
     // Ensure testData is an array and has at least one item
     if (!Array.isArray(testData) || testData.length === 0) {
