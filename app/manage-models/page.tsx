@@ -30,6 +30,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LogOut, Menu, LayoutDashboard, TestTube, Settings, Map, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
+import Sidebar from '@/components/Sidebar';
 
 // Define the Model interface
 interface Model {
@@ -37,6 +38,7 @@ interface Model {
   model_type: string;
   model_name: string;
   uploaded_at: string;
+  api_key: string; // Changed to required
 }
 
 const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -53,6 +55,8 @@ export default function ManageModels() {
   const [existingModels, setExistingModels] = useState<Model[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [customApiKey, setCustomApiKey] = useState<string>('');
+  const [customApiKeys, setCustomApiKeys] = useState<{ [key: string]: string }>({});
   const router = useRouter();
 
   useEffect(() => {
@@ -109,6 +113,11 @@ export default function ManageModels() {
       return;
     }
 
+    if (modelType === 'custom' && !customApiKey.trim()) {
+      setAddStatus('API key is required for custom models.');
+      return;
+    }
+
     console.log('Submitting Model:', {
       username,
       modelName,
@@ -129,6 +138,7 @@ export default function ManageModels() {
           modelType: modelTypeValue,
           hfEndpoint: modelTypeValue === 'huggingface' ? hfEndpoint.trim() : null,
           hfToken: modelTypeValue === 'huggingface' ? hfToken.trim() : null,
+          customApiKey: modelTypeValue === 'custom' ? customApiKey.trim() : null,
         }),
       });
 
@@ -208,6 +218,41 @@ export default function ManageModels() {
     router.push('/login');
   };
 
+  const handleCustomApiKeyChange = (modelId: string, apiKey: string) => {
+    setCustomApiKeys(prev => ({ ...prev, [modelId]: apiKey }));
+  };
+
+  const handleSaveApiKey = async (modelId: string) => {
+    if (!customApiKeys[modelId]?.trim()) {
+      setAddStatus('API key cannot be empty.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/manage-models/update-api-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          modelId,
+          apiKey: customApiKeys[modelId],
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setAddStatus('API key updated successfully');
+        fetchExistingModels(username); // Refresh the model list
+      } else {
+        setAddStatus(result.message || 'Failed to update API key');
+      }
+    } catch (error) {
+      console.error('Error updating API key:', error);
+      setAddStatus('An unexpected error occurred while updating the API key');
+    }
+  };
+
   if (!username) {
     return null; // or a loading spinner
   }
@@ -215,47 +260,7 @@ export default function ManageModels() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex">
       {/* Sidebar */}
-      <aside className={`bg-gray-900 w-72 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static z-30`}>
-        <div className="p-4">
-          <h1 className="text-2xl font-bold text-purple-400 mb-6">AI Evaluation</h1>
-        </div>
-        <nav className="flex-1 px-4 space-y-2">
-          <Link href="/dashboard" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <LayoutDashboard className="w-5 h-5 mr-2" /> Dashboard
-            </Button>
-          </Link>
-          <Link href="/prompt-testing" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <TestTube className="w-5 h-5 mr-2" /> Prompt Testing
-            </Button>
-          </Link>
-          <Link href="/manage-models" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <Settings className="w-5 h-5 mr-2" /> Manage Models
-            </Button>
-          </Link>
-          <Link href="/umap" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <Map className="w-5 h-5 mr-2" /> UMAP Visualization
-            </Button>
-          </Link>
-          <Link href="/worst-performing-slices" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <TrendingDown className="w-5 h-5 mr-2" /> Worst Performing Slices
-            </Button>
-          </Link>
-        </nav>
-        <div className="p-4">
-          <Button
-            variant="outline"
-            className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200"
-            onClick={handleLogout}
-          >
-            <LogOut className="w-5 h-5 mr-2" /> Logout
-          </Button>
-        </div>
-      </aside>
+      <Sidebar onLogout={handleLogout} />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
@@ -328,9 +333,19 @@ export default function ManageModels() {
                         <SelectContent>
                           <SelectItem value="gpt-4o">gpt-4o</SelectItem>
                           <SelectItem value="gpt-4o-mini">gpt-4o-mini</SelectItem>
-                          {/* Add more custom models as needed */}
+                          <SelectItem value="claude-3-sonnet">Claude 3.5 Sonnet</SelectItem>
+                          <SelectItem value="gemini-pro">Gemini Pro</SelectItem>
                         </SelectContent>
                       </Select>
+                      <Label htmlFor="custom-api-key" className="text-white mt-4">Enter API Key:</Label>
+                      <Input
+                        id="custom-api-key"
+                        type="password"
+                        value={customApiKey}
+                        onChange={(e) => setCustomApiKey(e.target.value)}
+                        className="mt-1 bg-gray-700 text-white"
+                        placeholder="Your API Key for the selected model"
+                      />
                     </div>
                   )}
 
@@ -427,6 +442,27 @@ export default function ManageModels() {
                           <p>
                             <strong>Uploaded at:</strong> {new Date(model.uploaded_at).toLocaleString()}
                           </p>
+                          {model.model_type === 'custom' && (
+                            <div className="mt-2">
+                              <Label htmlFor={`api-key-${model.model_id}`} className="text-white">API Key:</Label>
+                              <Input
+                                id={`api-key-${model.model_id}`}
+                                type="password"
+                                value={customApiKeys[model.model_id] || model.api_key || ''}
+                                onChange={(e) => handleCustomApiKeyChange(model.model_id, e.target.value)}
+                                className="mt-1 bg-gray-600 text-white"
+                                placeholder="Enter API Key"
+                                required
+                              />
+                              <Button
+                                onClick={() => handleSaveApiKey(model.model_id)}
+                                className="mt-2 bg-green-600 hover:bg-green-700"
+                                disabled={!customApiKeys[model.model_id]?.trim() && !model.api_key}
+                              >
+                                Save API Key
+                              </Button>
+                            </div>
+                          )}
                           <Button
                             variant="destructive"
                             className="mt-2 bg-red-600 hover:bg-red-700 active:bg-red-800 focus:ring-red-500"

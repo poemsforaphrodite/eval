@@ -6,19 +6,17 @@ import Cookies from 'js-cookie';
 import axios from 'axios';
 import dynamic from 'next/dynamic';
 import { UMAP } from 'umap-js';
-
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, BarChart, LayoutDashboard, TestTube, Settings, Map, TrendingDown } from "lucide-react";
+import { Menu, BarChart } from "lucide-react";
 import { motion } from "framer-motion";
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
-import Clusterer from 'density-clustering'; // Import density-clustering
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // {{ edit_1 }}
-import { Select } from "@/components/ui/select"; // {{ edit_10 }}
-import { Slider } from "@/components/ui/slider"; // {{ edit_11 }}
-import { Checkbox } from "@/components/ui/checkbox"; // {{ edit_READD_CHECKBOX_IMPORT }} Re-added Checkbox import
-import { kmeans } from 'ml-kmeans'; // Change this line
-import Link from 'next/link';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { kmeans } from 'ml-kmeans';
+import Sidebar from '@/components/Sidebar';
 
 // Dynamically import Plot component
 const DynamicPlot = dynamic(() => import('react-plotly.js'), { ssr: false });
@@ -258,47 +256,7 @@ export default function UMAPPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex">
       {/* Sidebar */}
-      <aside className={`bg-gray-900 w-72 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static z-30`}>
-        <div className="p-4">
-          <h1 className="text-2xl font-bold text-purple-400 mb-6">AI Evaluation</h1>
-        </div>
-        <nav className="flex-1 px-4 space-y-2">
-          <Link href="/dashboard" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <LayoutDashboard className="w-5 h-5 mr-2" /> Dashboard
-            </Button>
-          </Link>
-          <Link href="/prompt-testing" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <TestTube className="w-5 h-5 mr-2" /> Prompt Testing
-            </Button>
-          </Link>
-          <Link href="/manage-models" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <Settings className="w-5 h-5 mr-2" /> Manage Models
-            </Button>
-          </Link>
-          <Link href="/umap" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <Map className="w-5 h-5 mr-2" /> UMAP Visualization
-            </Button>
-          </Link>
-          <Link href="/worst-performing-slices" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <TrendingDown className="w-5 h-5 mr-2" /> Worst Performing Slices
-            </Button>
-          </Link>
-        </nav>
-        <div className="p-4">
-          <Button
-            variant="outline"
-            className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200"
-            onClick={handleLogout}
-          >
-            <LogOut className="w-5 h-5 mr-2" /> Logout
-          </Button>
-        </div>
-      </aside>
+      <Sidebar onLogout={handleLogout} />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">

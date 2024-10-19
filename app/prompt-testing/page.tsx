@@ -13,6 +13,7 @@ import { PlayCircle, Upload, LogOut, Menu, Search, LayoutDashboard, TestTube, Se
 import Link from 'next/link';
 import { motion } from "framer-motion";
 import { useRouter } from 'next/navigation';
+import Sidebar from '@/components/Sidebar';
 
 interface Model {
   model_name: string;
@@ -38,6 +39,30 @@ interface EvaluationResult {
   evaluatedAt: string; // Assuming backend returns ISO string
   latency: number; // Latency in milliseconds
 }
+
+// Add this function at the top level of the file
+const chunkText = (text: string, chunkSize: number = 1000): string[] => {
+  console.log('Chunking text...');
+  const words = text.split(/\s+/);
+  const chunks = [];
+  let currentChunk = '';
+
+  for (const word of words) {
+    if ((currentChunk + ' ' + word).length <= chunkSize) {
+      currentChunk += (currentChunk ? ' ' : '') + word;
+    } else {
+      chunks.push(currentChunk);
+      currentChunk = word;
+    }
+  }
+
+  if (currentChunk) {
+    chunks.push(currentChunk);
+  }
+
+  console.log(`Text chunked into ${chunks.length} chunks`);
+  return chunks;
+};
 
 export default function PromptTestingPage() {
   const router = useRouter();
@@ -97,9 +122,7 @@ export default function PromptTestingPage() {
   const handleModelSelection = (model: string) => {
     setSelectedModel(model);
     const modelType = model.split(' (')[1].replace(')', '').toLowerCase();
-    if (modelType === 'simple') {
-      setInputType('text');
-    } else if (modelType === 'custom' || modelType === 'huggingface') {
+    if (modelType === 'simple' || modelType === 'custom') {
       setInputType('text');
     }
     setFile(null);
@@ -174,34 +197,18 @@ export default function PromptTestingPage() {
   };
 
   // Add handlers for uploading Context TXT
-  const handleContextTxtUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleContextTxtUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const reader = new FileReader();
-      reader.onload = () => {
-        setContextTxt(reader.result as string);
+      reader.onload = async () => {
+        const text = reader.result as string;
+        setContextTxt(text);
         setSuccess('Context TXT uploaded successfully!');
         setErrors([]);
+        console.log('Context TXT uploaded successfully');
       };
       reader.readAsText(e.target.files[0]);
     }
-  };
-
-  // Function to encode image to base64
-  const encodeImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          // Extract the base64 part from the Data URL
-          const base64String = reader.result.split(',')[1];
-          resolve(base64String);
-        } else {
-          reject(new Error('Failed to read file as base64.'));
-        }
-      };
-      reader.onerror = error => reject(error);
-    });
   };
 
   const handleRunTest = async () => {
@@ -210,87 +217,108 @@ export default function PromptTestingPage() {
     setLoading(true);
 
     try {
-      let responseData;
-
-      if (inputType === 'text') {
-        const modelType = selectedModel.split(' (')[1].replace(')', '').toLowerCase();
-        if (modelType === 'simple') {
-          if (!file) {
-            setErrors(['Please upload a valid test data JSON file.']);
-            setLoading(false);
-            return;
-          }
-
-          const formData = new FormData();
-          formData.append('testData', file);
-          formData.append('username', username);
-          formData.append('modelName', selectedModel);
-
-          responseData = await axios.post('/api/models/simple', {
-            testData: await file.text().then(text => JSON.parse(text)),
-            username,
-            modelName: selectedModel,
-          });
-        } else if (modelType === 'custom' || modelType === 'huggingface') {
-          if (!promptJson || !contextTxt) {
-            setErrors(['Please upload both Prompt JSON and Context TXT files.']);
-            setLoading(false);
-            return;
-          }
-
-          responseData = await axios.post('/api/models/custom', {
-            username,
-            modelName: selectedModel,
-            promptJson,
-            contextTxt,
-            questionsJson,
-          });
-        }
-      } else if (inputType === 'audio') {
-        if (!promptAudio || !contextAudio || !responseAudio) {
-          setErrors(['Please upload all three audio files (prompt, context, and response).']);
-          setLoading(false);
-          return;
-        }
-
-        // Assuming there's an endpoint to handle audio input
-        responseData = await axios.post('/api/models/audio', {
-          username,
-          modelName: selectedModel,
-          promptAudio,
-          contextAudio,
-          responseAudio,
-        });
-      } else if (inputType === 'image') {
-        if (!promptImage || !contextImage || !responseImage) {
-          setErrors(['Please upload all three image files (prompt, context, and response).']);
-          setLoading(false);
-          return;
-        }
-
-        // Assuming there's an endpoint to handle image input
-        responseData = await axios.post('/api/models/image', {
-          username,
-          modelName: selectedModel,
-          promptImage: await encodeImage(promptImage),
-          contextImage: await encodeImage(contextImage),
-          responseImage: await encodeImage(responseImage),
-        });
+      if (!selectedModel) {
+        setErrors(['Please select a model for testing.']);
+        setLoading(false);
+        return;
       }
 
-      if (responseData && responseData.data && responseData.data.results) {
-        // Update to handle the new results
-        setAllResults(prevResults => [...prevResults, responseData.data.results]);
-        setSuccess('Evaluations completed. You can now view the results.');
+      const modelName = selectedModel.split(' (')[0];
+      const modelType = selectedModel.split(' (')[1].replace(')', '').toLowerCase();
+
+      console.log('Starting test run...');
+      let requestData;
+
+      if (modelType === 'simple') {
+        // Keep the simple model logic unchanged
+        if (!file) {
+          setErrors(['Please upload a test data file (JSON or CSV) for the simple model.']);
+          setLoading(false);
+          return;
+        }
+
+        const fileContent = await readFileContent(file);
+        let testData;
+
+        if (file.name.endsWith('.json')) {
+          testData = JSON.parse(fileContent);
+        } else if (file.name.endsWith('.csv')) {
+          testData = parseCSV(fileContent);
+        } else {
+          throw new Error('Unsupported file type');
+        }
+
+        requestData = {
+          username,
+          modelName,
+          testData,
+        };
+      } else if (modelType === 'custom') {
+        if (!promptJson || !contextTxt) {
+          setErrors(['Please upload both Prompt JSON and Context TXT files for the custom model.']);
+          setLoading(false);
+          return;
+        }
+
+        let parsedPrompts;
+        try {
+          parsedPrompts = JSON.parse(promptJson);
+        } catch (error) {
+          setErrors(['Invalid Prompt JSON format. Please check your file.']);
+          setLoading(false);
+          return;
+        }
+
+        requestData = {
+          username,
+          modelName,
+          testData: parsedPrompts.map((prompt: string) => ({
+            prompt: { prompt },
+            context: contextTxt,
+          })),
+        };
       } else {
-        setErrors(['Unexpected response from the server.']);
+        throw new Error(`Unsupported model type: ${modelType}`);
+      }
+
+      console.log('Sending request to API:', requestData);
+      let response;
+      if (modelType === 'simple') {
+        response = await axios.post('/api/models/simple', requestData);
+      } else if (modelType === 'custom') {
+        response = await axios.post('/api/models/custom', requestData);
+      }
+
+      console.log('Received response from API:', response.data);
+
+      if (response.data && response.data.results) {
+        setAllResults(prevResults => [...prevResults, response.data.results]);
+        setSuccess('Evaluation completed. You can now view the results.');
+      } else {
+        throw new Error('Unexpected response format from server');
       }
     } catch (error: any) {
       console.error('Error running tests:', error.response?.data || error.message);
-      setErrors(['An error occurred while running evaluations. Please try again.']);
+      setErrors([`An error occurred while running evaluations: ${error.response?.data?.error || error.message}`]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to read file content
+  const readFileContent = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.onerror = (e) => reject(e);
+      reader.readAsText(file);
+    });
+  };
+
+  // You'll need to implement this function to parse CSV data
+  const parseCSV = (csvContent: string) => {
+    // Implement CSV parsing logic here
+    // Return an array of objects representing the CSV data
   };
 
   const handleLogout = () => {
@@ -303,47 +331,7 @@ export default function PromptTestingPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex">
       {/* Sidebar */}
-      <aside className={`bg-gray-900 w-72 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static z-30`}>
-        <div className="p-4">
-          <h1 className="text-2xl font-bold text-purple-400 mb-6">AI Evaluation</h1>
-        </div>
-        <nav className="flex-1 px-4 space-y-2">
-          <Link href="/dashboard" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <LayoutDashboard className="w-5 h-5 mr-2" /> Dashboard
-            </Button>
-          </Link>
-          <Link href="/prompt-testing" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <TestTube className="w-5 h-5 mr-2" /> Prompt Testing
-            </Button>
-          </Link>
-          <Link href="/manage-models" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <Settings className="w-5 h-5 mr-2" /> Manage Models
-            </Button>
-          </Link>
-          <Link href="/umap" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <Map className="w-5 h-5 mr-2" /> UMAP Visualization
-            </Button>
-          </Link>
-          <Link href="/worst-performing-slices" className="block">
-            <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-              <TrendingDown className="w-5 h-5 mr-2" /> Worst Performing Slices
-            </Button>
-          </Link>
-        </nav>
-        <div className="p-4">
-          <Button
-            variant="outline"
-            className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200"
-            onClick={handleLogout}
-          >
-            <LogOut className="w-5 h-5 mr-2" /> Logout
-          </Button>
-        </div>
-      </aside>
+      <Sidebar onLogout={handleLogout} />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">

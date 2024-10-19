@@ -3,15 +3,16 @@ import { connectToDatabase } from '@/lib/mongodb';
 
 export async function POST(request: Request) {
   try {
-    const { username, modelName, modelType, hfEndpoint, hfToken } = await request.json();
+    const { username, modelName, modelType, hfEndpoint, hfToken, customApiKey } = await request.json();
 
-    // Logging incoming data
+    // Logging incoming data (make sure to not log sensitive information in production)
     console.log('Received Model Addition Request:', {
       username,
       modelName,
       modelType,
       hfEndpoint,
-      hfToken,
+      // hfToken: 'REDACTED',
+      // customApiKey: 'REDACTED'
     });
 
     if (!username) {
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
     const modelData: any = {
       model_id: modelId,
       model_name: modelName,
-      model_type: modelType, // This will now be 'simple', 'custom', or 'huggingface'
+      model_type: modelType,
       file_path: null,
       model_link: modelType === 'huggingface' ? hfEndpoint : null,
       uploaded_at: new Date(),
@@ -50,6 +51,14 @@ export async function POST(request: Request) {
         );
       }
       modelData['model_api_token'] = hfToken;
+    } else if (modelType === 'custom') {
+      if (!customApiKey) {
+        return NextResponse.json(
+          { success: false, message: 'API Key is required for custom models.' },
+          { status: 400 }
+        );
+      }
+      modelData['model_api_token'] = customApiKey;
     }
 
     const result = await usersCollection.updateOne(
