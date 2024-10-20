@@ -111,6 +111,9 @@ export default function UMAPPage() {
   const [clusterCounts, setClusterCounts] = useState<{ cluster: number; count: number }[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // {{ edit_1 }}
+  const [shouldUpdateUMAP, setShouldUpdateUMAP] = useState(false);
+
   useEffect(() => {
     const storedUsername = Cookies.get('username');
     if (storedUsername) {
@@ -140,11 +143,10 @@ export default function UMAPPage() {
   const fetchEvaluations = async (user: string, modelName: string) => {
     setLoading(true);
     try {
-      // Remove the model type from the modelName
       const cleanModelName = modelName.split(' (')[0];
-      
-      // Ensure proper URL encoding
       const response = await axios.get(`/api/evaluations?username=${encodeURIComponent(user)}&model_name=${encodeURIComponent(cleanModelName)}`);
+      console.log('Fetched evaluations:', response.data.evaluations);
+      console.log('Number of fetched evaluations:', response.data.evaluations.length);
       setEvaluations(response.data.evaluations);
       performUMAP(response.data.evaluations);
     } catch (error) {
@@ -156,8 +158,10 @@ export default function UMAPPage() {
   };
 
   const performUMAP = async (data: Evaluation[]) => {
-    // Ensure this function only runs on the client side
     if (typeof window === 'undefined') return;
+    setShouldUpdateUMAP(false);
+
+    console.log('Initial data count:', data.length);
 
     // Prepare data based on selected metrics
     const featureVectors = data.map(evalResult => 
@@ -167,8 +171,7 @@ export default function UMAPPage() {
       })
     );
 
-    // Filter out any rows that contain NaN or undefined values
-    const validFeatureVectors = featureVectors.filter(row => row.every(value => !isNaN(value) && value !== undefined));
+    console.log('Feature vectors count:', featureVectors.length);
 
     // Simple normalization function
     const normalize = (array: number[]) => {
@@ -178,19 +181,20 @@ export default function UMAPPage() {
     };
 
     // Normalize each feature
-    const X_scaled = validFeatureVectors[0].map((_, colIndex) => 
-      normalize(validFeatureVectors.map(row => row[colIndex]))
-    ).map((col, rowIndex) => 
-      col.map((value, colIndex) => validFeatureVectors[colIndex][rowIndex])
+    const X_scaled = featureVectors.map(row => 
+      row.map((value, colIndex) => {
+        const column = featureVectors.map(r => r[colIndex]);
+        return normalize(column)[featureVectors.indexOf(row)];
+      })
     );
 
-    // Check if we have enough data to proceed
+    console.log('Scaled data count:', X_scaled.length);
+
     if (X_scaled.length < (nComponents === 3 ? 3 : 2)) {
       console.error('Not enough valid data for UMAP visualization');
       return;
     }
 
-    // Use UMAP directly, but only on the client side
     const umap = new UMAP({
       nNeighbors: nNeighbors[0],
       minDist: minDist[0],
@@ -199,23 +203,26 @@ export default function UMAPPage() {
     });
 
     // Fit the data and transform it
-    umap.fit(X_scaled);
-    const reducedData = umap.transform(X_scaled);
+    const reducedData = umap.fit(X_scaled);
+
+    console.log('Reduced data count:', reducedData.length);
 
     // Perform KMeans clustering
     const kmeans_result = kmeans(X_scaled, numClusters[0], { seed: 42 });
     const clusterLabels = kmeans_result.clusters;
 
+    console.log('Cluster labels count:', clusterLabels.length);
+
     // Assign cluster IDs to data points
     const mappedData: UMAPPoint[] = reducedData.map((point: number[], index: number) => ({
       x: point[0],
-      y: nComponents === 3 ? point[1] : 0, // z will be 0 if 2D
-      z: nComponents === 3 ? point[2] : 0, // z will be 0 if 2D
+      y: nComponents === 3 ? point[1] : point[1],
+      z: nComponents === 3 ? point[2] : 0,
       prompt: data[index].prompt,
       clusterId: clusterLabels[index],
-      modelName: data[index].modelName, // Added property
-      response: data[index].response, // Added property
-      factors: data[index].factors, // Added property
+      modelName: data[index].modelName,
+      response: data[index].response,
+      factors: data[index].factors,
     }));
 
     setUmapData(mappedData);
@@ -223,11 +230,21 @@ export default function UMAPPage() {
     // Calculate cluster counts
     const counts: Record<number, number> = {};
     clusterLabels.forEach(label => {
-      counts[label as number] = (counts[label as number] || 0) + 1;
+      counts[label] = (counts[label] || 0) + 1;
     });
     const countsArray = Object.keys(counts).map(key => ({ cluster: parseInt(key), count: counts[parseInt(key)] }));
     setClusterCounts(countsArray);
+
+    console.log('Final mapped data count:', mappedData.length);
+    console.log('Cluster counts:', countsArray);
   };
+
+  // {{ edit_3 }}
+  useEffect(() => {
+    if (shouldUpdateUMAP && evaluations.length > 0) {
+      performUMAP(evaluations);
+    }
+  }, [shouldUpdateUMAP, evaluations, selectedMetrics, nComponents, nNeighbors, minDist, numClusters]);
 
   // {{ edit_20 }} Handle metric selection
   const handleMetricChange = (metric: string) => {
@@ -377,7 +394,8 @@ export default function UMAPPage() {
                     {/* Apply UMAP Button */}
                     <div className="mb-4">
                       <Button
-                        onClick={() => performUMAP(evaluations)}
+                        // {{ edit_4 }}
+                        onClick={() => setShouldUpdateUMAP(true)}
                         disabled={selectedMetrics.length < 2}
                       >
                         Apply UMAP

@@ -1,4 +1,4 @@
-import { MongoClient, Db } from 'mongodb';
+import { MongoClient, Db, Document } from 'mongodb';
 import crypto from 'crypto';
 
 const uri = process.env.MONGODB_URI!;
@@ -38,4 +38,20 @@ export async function connectToDatabase(): Promise<Db> {
 // Update this function to generate API keys without database interaction
 export function generateApiKey(): string {
   return crypto.randomBytes(32).toString('hex');
+}
+
+// Update this function to include isAdmin in the user object
+export async function createUser(username: string, hashedPassword: string, apiKey: string, isAdmin: boolean): Promise<void> {
+  const db = await getDatabase();
+  const users = db.collection('users');
+  await users.insertOne({ username, password: hashedPassword, apiKey, isAdmin });
+}
+
+// Add this new function to get users from MongoDB
+export async function getUsers(): Promise<Document[]> {
+  const db = await getDatabase();
+  const users = db.collection('users');
+  
+  // Fetch all users, excluding the password field
+  return users.find({}, { projection: { password: 0 } }).toArray();
 }

@@ -8,11 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { motion } from "framer-motion";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 export default function SignupPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
 
@@ -29,7 +32,7 @@ export default function SignupPage() {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, isAdmin }),
       });
 
       const data = await response.json();
@@ -84,6 +87,16 @@ export default function SignupPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full bg-gray-800 text-gray-100 border-gray-700 focus:border-purple-400"
                 />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isAdmin"
+                  checked={isAdmin}
+                  onCheckedChange={(checked) => setIsAdmin(checked as boolean)}
+                />
+                <Label htmlFor="isAdmin" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Sign up as admin
+                </Label>
               </div>
               {error && (
                 <Alert variant="destructive">

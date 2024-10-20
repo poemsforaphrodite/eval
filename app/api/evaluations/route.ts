@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   const username = searchParams.get('username');
   const modelName = searchParams.get('model_name'); // Keep as 'model_name' for query parameter
   const timeRange = searchParams.get('timeRange') || 'day';
+  const isAdmin = searchParams.get('isAdmin') === 'true';
 
   if (!username) {
     return NextResponse.json(
@@ -45,13 +46,19 @@ export async function GET(req: NextRequest) {
         startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Default to last day
     }
 
+    let query: any = {
+      modelName: modelName,
+      evaluatedAt: { $gte: startDate }
+    };
+
+    // If not admin, filter by username
+    if (!isAdmin) {
+      query.username = username;
+    }
+
     const evaluations = await db
       .collection('evaluation_results')
-      .find({
-        username,
-        modelName: modelName,
-        evaluatedAt: { $gte: startDate }
-      })
+      .find(query)
       .sort({ evaluatedAt: -1 }) // Optional: Sort by most recent
       .toArray();
 
