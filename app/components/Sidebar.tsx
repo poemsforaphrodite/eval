@@ -15,11 +15,21 @@ import {
   Activity,
   GitBranch,
   UserCheck,
-  Beaker, // Changed from Flask to Beaker
+  Beaker,
   MessageSquare,
   Archive,
   Database as DatasetIcon,
-  Box
+  Box,
+  SplitSquareVertical,
+  Users,
+  Shield,
+  Eye,
+  BarChart2,
+  FileBarChart,
+  Bell,
+  Clock,
+  // Add new icon
+  ShoppingBag
 } from "lucide-react";
 
 interface SidebarProps {
@@ -30,7 +40,7 @@ export default function Sidebar({ onLogout }: SidebarProps) {
   return (
     <aside className="bg-gray-900 w-72 min-h-screen flex flex-col transition-all duration-300 ease-in-out lg:translate-x-0 fixed lg:static z-30">
       <div className="p-4">
-        <h1 className="text-2xl font-bold text-purple-400 mb-6">AI Evaluation</h1>
+        <h1 className="text-2xl font-bold text-purple-400 mb-6">Eval AI</h1>
       </div>
       <nav className="flex-1 px-4 space-y-2">
         <Link href="/dashboard" className="block">
@@ -116,6 +126,56 @@ export default function Sidebar({ onLogout }: SidebarProps) {
         <Link href="/models" className="block">
           <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
             <Box className="w-5 h-5 mr-2" /> Models
+          </Button>
+        </Link>
+        <Link href="/ab-testing" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+            <SplitSquareVertical className="w-5 h-5 mr-2" /> A/B Testing
+          </Button>
+        </Link>
+        <Link href="/users" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+            <Users className="w-5 h-5 mr-2" /> Users
+          </Button>
+        </Link>
+        <Link href="/guardrails" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+            <Shield className="w-5 h-5 mr-2" /> Guardrails
+          </Button>
+        </Link>
+        <Link href="/observability" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+            <Eye className="w-5 h-5 mr-2" /> Observability
+          </Button>
+        </Link>
+        {/* Add new links */}
+        <Link href="/custom-metrics" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+            <BarChart2 className="w-5 h-5 mr-2" /> Custom Metrics
+          </Button>
+        </Link>
+        <Link href="/reports" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+            <FileBarChart className="w-5 h-5 mr-2" /> Reports
+          </Button>
+        </Link>
+        
+        {/* Add new links */}
+        <Link href="/notifications" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+            <Bell className="w-5 h-5 mr-2" /> Notifications
+          </Button>
+        </Link>
+        <Link href="/time-span" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+            <Clock className="w-5 h-5 mr-2" /> Time Span
+          </Button>
+        </Link>
+        
+        {/* Add new link */}
+        <Link href="/custom-metric-marketplace" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+            <ShoppingBag className="w-5 h-5 mr-2" /> Custom Metric Marketplace
           </Button>
         </Link>
       </nav>

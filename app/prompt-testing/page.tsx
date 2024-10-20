@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,11 @@ interface EvaluationResult {
   };
   evaluatedAt: string; // Assuming backend returns ISO string
   latency: number; // Latency in milliseconds
+}
+
+interface ApiResponse {
+  results: EvaluationResult[];
+  // Add other properties if needed
 }
 
 // Add this function at the top level of the file
@@ -282,11 +287,13 @@ export default function PromptTestingPage() {
       }
 
       console.log('Sending request to API:', requestData);
-      let response;
+      let response: AxiosResponse<ApiResponse>;
       if (modelType === 'simple') {
-        response = await axios.post('/api/models/simple', requestData);
+        response = await axios.post<ApiResponse>('/api/models/simple', requestData);
       } else if (modelType === 'custom') {
-        response = await axios.post('/api/models/custom', requestData);
+        response = await axios.post<ApiResponse>('/api/models/custom', requestData);
+      } else {
+        throw new Error(`Unsupported model type: ${modelType}`);
       }
 
       console.log('Received response from API:', response.data);
