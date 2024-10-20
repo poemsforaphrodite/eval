@@ -85,7 +85,10 @@ export default function WorstPerformingSlicesPage() {
   const fetchEvaluations = async (user: string, modelName: string) => {
     setLoading(true);
     try {
-      const response = await axios.get(`/api/evaluations?username=${encodeURIComponent(user)}&model_name=${encodeURIComponent(modelName)}`);
+      // Remove the model type from the modelName
+      const cleanModelName = modelName.split(' (')[0];
+      
+      const response = await axios.get(`/api/evaluations?username=${encodeURIComponent(user)}&model_name=${encodeURIComponent(cleanModelName)}`);
       setEvaluations(response.data.evaluations);
       calculateWorstSlices(response.data.evaluations);
     } catch (error) {

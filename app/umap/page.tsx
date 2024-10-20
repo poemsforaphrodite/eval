@@ -140,8 +140,11 @@ export default function UMAPPage() {
   const fetchEvaluations = async (user: string, modelName: string) => {
     setLoading(true);
     try {
-      // {{ edit_9 }} Ensure proper URL encoding
-      const response = await axios.get(`/api/evaluations?username=${encodeURIComponent(user)}&model_name=${encodeURIComponent(modelName)}`);
+      // Remove the model type from the modelName
+      const cleanModelName = modelName.split(' (')[0];
+      
+      // Ensure proper URL encoding
+      const response = await axios.get(`/api/evaluations?username=${encodeURIComponent(user)}&model_name=${encodeURIComponent(cleanModelName)}`);
       setEvaluations(response.data.evaluations);
       performUMAP(response.data.evaluations);
     } catch (error) {
@@ -415,25 +418,25 @@ export default function UMAPPage() {
                       }
                     }))}
                     layout={{
-                      width: 800, // Changed from '100%' to a number
+                      width: 800,
                       height: 600,
                       title: 'UMAP Visualization',
-                      titlefont: { color: '#FFFFFF' }, // Set title color to white
+                      titlefont: { color: '#FFFFFF' },
                       legend: { 
                         x: 1,
                         y: 1,
-                        font: { color: '#FFFFFF' } // Set legend font color to white
+                        font: { color: '#FFFFFF' }
                       },
-                      plot_bgcolor: '#000000', // Set plot background to black
-                      paper_bgcolor: '#000000', // Set paper background to black
-                      font: { color: '#FFFFFF' }, // Set default font color to white
+                      plot_bgcolor: '#1f2937', // Changed to match bg-gray-800
+                      paper_bgcolor: '#1f2937', // Changed to match bg-gray-800
+                      font: { color: '#FFFFFF' },
                       scene: nComponents === 3 ? {
-                        xaxis: { title: 'UMAP 1', color: '#FFFFFF', gridcolor: '#444444', zerolinecolor: '#444444' },
-                        yaxis: { title: 'UMAP 2', color: '#FFFFFF', gridcolor: '#444444', zerolinecolor: '#444444' },
-                        zaxis: { title: 'UMAP 3', color: '#FFFFFF', gridcolor: '#444444', zerolinecolor: '#444444' }
+                        xaxis: { title: 'UMAP 1', color: '#FFFFFF', gridcolor: '#374151', zerolinecolor: '#374151' },
+                        yaxis: { title: 'UMAP 2', color: '#FFFFFF', gridcolor: '#374151', zerolinecolor: '#374151' },
+                        zaxis: { title: 'UMAP 3', color: '#FFFFFF', gridcolor: '#374151', zerolinecolor: '#374151' }
                       } : {
-                        xaxis: { title: 'UMAP 1', color: '#FFFFFF', gridcolor: '#444444', zerolinecolor: '#444444' },
-                        yaxis: { title: 'UMAP 2', color: '#FFFFFF', gridcolor: '#444444', zerolinecolor: '#444444' }
+                        xaxis: { title: 'UMAP 1', color: '#FFFFFF', gridcolor: '#374151', zerolinecolor: '#374151' },
+                        yaxis: { title: 'UMAP 2', color: '#FFFFFF', gridcolor: '#374151', zerolinecolor: '#374151' }
                       }
                     }}
                     config={{
