@@ -126,30 +126,79 @@ Do not include any additional text, explanations, or markdown formatting.
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const formData = await req.formData();
+    const username = formData.get('username') as string;
+    const modelName = formData.get('modelName') as string;
+    
+    const promptType = formData.get('promptType') as string;
+    const contextType = formData.get('contextType') as string;
+    const responseType = formData.get('responseType') as string;
 
-    const { username, modelName, promptImage, contextImage, responseImage } = body;
+    const promptImage = formData.get('promptImage') as File | null;
+    const contextImage = formData.get('contextImage') as File | null;
+    const responseImage = formData.get('responseImage') as File | null;
 
-    if (!username || !modelName || !promptImage || !contextImage || !responseImage) {
+    const promptText = formData.get('promptText') as string | null;
+    const contextText = formData.get('contextText') as string | null;
+    const responseText = formData.get('responseText') as string | null;
+
+    if (!username || !modelName) {
       return NextResponse.json(
-        { error: 'Missing required fields: username, modelName, promptImage, contextImage, or responseImage.' },
+        { error: 'Missing required fields: username or modelName.' },
         { status: 400 }
       );
     }
 
-    // Summarize images
-    const [prompt, context, response] = await Promise.all([
-      summarizeImage(promptImage),
-      summarizeImage(contextImage),
-      summarizeImage(responseImage)
-    ]);
+    let prompt, context, response;
 
-    // Evaluate the response based on the summaries
+    // Handle prompt
+    if (promptType === 'image' && promptImage) {
+      const buffer = await promptImage.arrayBuffer();
+      const base64Image = Buffer.from(buffer).toString('base64');
+      prompt = await summarizeImage(base64Image);
+    } else if (promptType === 'text' && promptText) {
+      prompt = promptText;
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid prompt data.' },
+        { status: 400 }
+      );
+    }
+
+    // Handle context
+    if (contextType === 'image' && contextImage) {
+      const buffer = await contextImage.arrayBuffer();
+      const base64Image = Buffer.from(buffer).toString('base64');
+      context = await summarizeImage(base64Image);
+    } else if (contextType === 'text' && contextText) {
+      context = contextText;
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid context data.' },
+        { status: 400 }
+      );
+    }
+
+    // Handle response
+    if (responseType === 'image' && responseImage) {
+      const buffer = await responseImage.arrayBuffer();
+      const base64Image = Buffer.from(buffer).toString('base64');
+      response = await summarizeImage(base64Image);
+    } else if (responseType === 'text' && responseText) {
+      response = responseText;
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid response data.' },
+        { status: 400 }
+      );
+    }
+
+    // Evaluate the response based on the summaries or text
     const evaluation = await evaluateImageResponse(prompt, context, response);
 
     if (!evaluation) {
       return NextResponse.json(
-        { error: 'Failed to evaluate the image response.' },
+        { error: 'Failed to evaluate the response.' },
         { status: 500 }
       );
     }

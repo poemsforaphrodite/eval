@@ -104,9 +104,9 @@ export default function PromptTestingPage() {
   const [allResults, setAllResults] = useState<EvaluationResult[][]>([]);
 
   // New state variables for input types
-  const [promptInputType, setPromptInputType] = useState<'audio' | 'text'>('audio');
-  const [contextInputType, setContextInputType] = useState<'audio' | 'text'>('audio');
-  const [responseInputType, setResponseInputType] = useState<'audio' | 'text'>('audio');
+  const [promptInputType, setPromptInputType] = useState<'image' | 'text'>('image');
+  const [contextInputType, setContextInputType] = useState<'image' | 'text'>('image');
+  const [responseInputType, setResponseInputType] = useState<'image' | 'text'>('image');
 
   // New state variables for text inputs
   const [promptText, setPromptText] = useState<string>('');
@@ -334,11 +334,38 @@ export default function PromptTestingPage() {
           throw new Error(`Unsupported model type: ${modelType}`);
         }
       } else if (inputType === 'image') {
-        // Handle image input
-        // Implement similar logic for image handling if applicable
-        setErrors(['Image input handling is not yet implemented.']);
-        setLoading(false);
-        return;
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('modelName', modelName);
+        
+        formData.append('promptType', promptInputType);
+        formData.append('contextType', contextInputType);
+        formData.append('responseType', responseInputType);
+
+        if (promptInputType === 'image' && promptImage) {
+          formData.append('promptImage', promptImage);
+        } else if (promptInputType === 'text') {
+          formData.append('promptText', promptText);
+        }
+
+        if (contextInputType === 'image' && contextImage) {
+          formData.append('contextImage', contextImage);
+        } else if (contextInputType === 'text') {
+          formData.append('contextText', contextText);
+        }
+
+        if (responseInputType === 'image' && responseImage) {
+          formData.append('responseImage', responseImage);
+        } else if (responseInputType === 'text') {
+          formData.append('responseText', responseText);
+        }
+
+        console.log('Sending request to image model API');
+        response = await axios.post<ApiResponse>('/api/models/image', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
       } else {
         throw new Error(`Unsupported input type: ${inputType}`);
       }
@@ -666,57 +693,74 @@ export default function PromptTestingPage() {
 
                             {inputType === 'image' && (
                               <div className="space-y-6">
-                                <Label className="text-white text-lg mb-2 block">Upload Image Files</Label>
+                                <Label className="text-white text-lg mb-2 block">Upload Image or Enter Text</Label>
                                 <div className="space-y-4">
-                                  {['prompt', 'context', 'response'].map((type) => (
+                                  {[
+                                    { type: 'prompt', setter: setPromptInputType, imageState: promptImage, textState: promptText, textSetter: setPromptText, imageSetter: setPromptImage, currentType: promptInputType },
+                                    { type: 'context', setter: setContextInputType, imageState: contextImage, textState: contextText, textSetter: setContextText, imageSetter: setContextImage, currentType: contextInputType },
+                                    { type: 'response', setter: setResponseInputType, imageState: responseImage, textState: responseText, textSetter: setResponseText, imageSetter: setResponseImage, currentType: responseInputType }
+                                  ].map(({ type, setter, imageState, textState, textSetter, imageSetter, currentType }) => (
                                     <div key={type}>
-                                      <Label htmlFor={`${type}-image`} className="text-white text-sm mb-1 block">
-                                        {type.charAt(0).toUpperCase() + type.slice(1)} Image
+                                      <Label htmlFor={`${type}-input`} className="text-white text-sm mb-1 block">
+                                        {type.charAt(0).toUpperCase() + type.slice(1)} Input
                                       </Label>
-                                      <div
-                                        className="border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
-                                        onDragOver={(e) => e.preventDefault()}
-                                        onDrop={(e) => {
-                                          e.preventDefault();
-                                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                                            const file = e.dataTransfer.files[0];
-                                            if (type === 'prompt') setPromptImage(file);
-                                            if (type === 'context') setContextImage(file);
-                                            if (type === 'response') setResponseImage(file);
-                                            setSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} image dropped successfully!`);
-                                            setErrors([]);
-                                          }
-                                        }}
-                                      >
-                                        <Input
-                                          type="file"
-                                          id={`${type}-image`}
-                                          accept=".png,.jpg,.jpeg"
-                                          className="hidden"
-                                          onChange={(e) => {
-                                            if (e.target.files && e.target.files[0]) {
-                                              const file = e.target.files[0];
-                                              if (type === 'prompt') setPromptImage(file);
-                                              if (type === 'context') setContextImage(file);
-                                              if (type === 'response') setResponseImage(file);
-                                              setSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} image uploaded successfully!`);
+                                      <Select onValueChange={(value) => setter(value as 'image' | 'text')} value={currentType}>
+                                        <SelectTrigger id={`${type}-input`}>
+                                          <SelectValue placeholder="Select input type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="image">Image</SelectItem>
+                                          <SelectItem value="text">Text</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      {currentType === 'image' ? (
+                                        <div
+                                          className="mt-2 border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
+                                          onDragOver={(e) => e.preventDefault()}
+                                          onDrop={(e) => {
+                                            e.preventDefault();
+                                            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                                              const file = e.dataTransfer.files[0];
+                                              imageSetter(file);
+                                              setSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} image dropped successfully!`);
                                               setErrors([]);
                                             }
                                           }}
+                                        >
+                                          <Input
+                                            type="file"
+                                            id={`${type}-image`}
+                                            accept=".png,.jpg,.jpeg"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                              if (e.target.files && e.target.files[0]) {
+                                                const file = e.target.files[0];
+                                                imageSetter(file);
+                                                setSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} image uploaded successfully!`);
+                                                setErrors([]);
+                                              }
+                                            }}
+                                          />
+                                          <Label htmlFor={`${type}-image`} className="cursor-pointer">
+                                            <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                                            <p className="mt-1 text-sm text-white">
+                                              Drag and drop or click to upload {type.charAt(0).toUpperCase() + type.slice(1)} Image
+                                            </p>
+                                            <p className="mt-1 text-xs text-gray-400">
+                                              Limit 200MB per file • PNG, JPG, JPEG
+                                            </p>
+                                          </Label>
+                                        </div>
+                                      ) : (
+                                        <Input
+                                          type="text"
+                                          placeholder={`Enter ${type} text`}
+                                          value={textState}
+                                          onChange={(e) => textSetter(e.target.value)}
+                                          className="mt-2"
                                         />
-                                        <Label htmlFor={`${type}-image`} className="cursor-pointer">
-                                          <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                                          <p className="mt-1 text-sm text-white">
-                                            Drag and drop or click to upload {type.charAt(0).toUpperCase() + type.slice(1)} Image
-                                          </p>
-                                          <p className="mt-1 text-xs text-gray-400">
-                                            Limit 200MB per file • PNG, JPG, JPEG
-                                          </p>
-                                        </Label>
-                                      </div>
-                                      {((type === 'prompt' && promptImage) || 
-                                       (type === 'context' && contextImage) || 
-                                       (type === 'response' && responseImage)) && (
+                                      )}
+                                      {imageState && currentType === 'image' && (
                                         <p className="mt-2 text-sm text-white">
                                           {type.charAt(0).toUpperCase() + type.slice(1)} image selected
                                         </p>
