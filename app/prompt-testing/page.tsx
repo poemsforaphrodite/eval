@@ -41,7 +41,8 @@ interface EvaluationResult {
 }
 
 interface ApiResponse {
-  results: EvaluationResult[];
+  success: boolean;
+  result: EvaluationResult;
 }
 
 const chunkText = (text: string, chunkSize: number = 1000): string[] => {
@@ -242,7 +243,40 @@ export default function PromptTestingPage() {
       console.log('Starting test run...');
       let response;
 
-      if (inputType === 'audio') {
+      if (inputType === 'image') {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('modelName', modelName);
+        
+        formData.append('promptType', promptInputType);
+        formData.append('contextType', contextInputType);
+        formData.append('responseType', responseInputType);
+
+        if (promptInputType === 'image' && promptImage) {
+          formData.append('promptImage', promptImage);
+        } else if (promptInputType === 'text') {
+          formData.append('promptText', promptText);
+        }
+
+        if (contextInputType === 'image' && contextImage) {
+          formData.append('contextImage', contextImage);
+        } else if (contextInputType === 'text') {
+          formData.append('contextText', contextText);
+        }
+
+        if (responseInputType === 'image' && responseImage) {
+          formData.append('responseImage', responseImage);
+        } else if (responseInputType === 'text') {
+          formData.append('responseText', responseText);
+        }
+
+        console.log('Sending request to image model API');
+        response = await axios.post<ApiResponse>('/api/models/image', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } else if (inputType === 'audio') {
         const formData = new FormData();
         formData.append('username', username);
         formData.append('modelName', modelName);
@@ -333,47 +367,14 @@ export default function PromptTestingPage() {
         } else {
           throw new Error(`Unsupported model type: ${modelType}`);
         }
-      } else if (inputType === 'image') {
-        const formData = new FormData();
-        formData.append('username', username);
-        formData.append('modelName', modelName);
-        
-        formData.append('promptType', promptInputType);
-        formData.append('contextType', contextInputType);
-        formData.append('responseType', responseInputType);
-
-        if (promptInputType === 'image' && promptImage) {
-          formData.append('promptImage', promptImage);
-        } else if (promptInputType === 'text') {
-          formData.append('promptText', promptText);
-        }
-
-        if (contextInputType === 'image' && contextImage) {
-          formData.append('contextImage', contextImage);
-        } else if (contextInputType === 'text') {
-          formData.append('contextText', contextText);
-        }
-
-        if (responseInputType === 'image' && responseImage) {
-          formData.append('responseImage', responseImage);
-        } else if (responseInputType === 'text') {
-          formData.append('responseText', responseText);
-        }
-
-        console.log('Sending request to image model API');
-        response = await axios.post<ApiResponse>('/api/models/image', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
       } else {
         throw new Error(`Unsupported input type: ${inputType}`);
       }
 
       console.log('Received response from API:', response.data);
 
-      if (response.data && response.data.results) {
-        setAllResults(prevResults => [...prevResults, response.data.results]);
+      if (response.data && response.data.success && response.data.result) {
+        setAllResults(prevResults => [...prevResults, [response.data.result]]);
         setSuccess('Evaluation completed. You can now view the results.');
       } else {
         throw new Error('Unexpected response format from server');
@@ -424,46 +425,41 @@ export default function PromptTestingPage() {
   const modelOptions = models.map(model => `${model.model_name} (${model.model_type.charAt(0).toUpperCase() + model.model_type.slice(1)})`);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 flex">
-      {/* Sidebar */}
-      <Sidebar onLogout={handleLogout} />
-
-      {/* Main content */}
+    <div className="min-h-screen bg-gray-950 text-white flex">
+      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="bg-gray-900 shadow-lg lg:hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-purple-400">AI Evaluation Dashboard</h1>
+            <h1 className="text-2xl font-bold text-purple-400">Prompt Testing</h1>
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              <Menu className="h-6 w-6 text-gray-300" />
+              <Menu className="h-6 w-6 text-white" />
             </Button>
           </div>
         </header>
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card className="mb-8 bg-gray-800 border-gray-700 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold text-white">Prompt Testing</CardTitle>
-                <CardDescription className="text-gray-300">Test your AI models with various inputs</CardDescription>
+
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-950">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <Card className="bg-gray-900 border-gray-800 shadow-lg rounded-lg overflow-hidden">
+              <CardHeader className="bg-gray-800 text-white p-6">
+                <CardTitle className="text-2xl font-bold text-purple-400">Prompt Testing</CardTitle>
+                <CardDescription className="text-gray-200">Test your AI models with various inputs</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="p-6 space-y-6 text-white">
                 {errors.length > 0 && (
-                  <div className="bg-red-900 text-white p-3 rounded-md">
+                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
                     {errors.map((error, idx) => (
                       <p key={idx}>{error}</p>
                     ))}
                   </div>
                 )}
                 {success && (
-                  <div className="bg-green-900 text-white p-3 rounded-md">
+                  <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
                     <p>{success}</p>
                   </div>
                 )}
                 {!errors.length && models.length === 0 && (
-                  <div className="bg-yellow-900 text-white p-3 rounded-md">
+                  <div className="bg-yellow-900 border border-yellow-800 text-yellow-100 px-4 py-3 rounded relative" role="alert">
                     <p>You have no uploaded models. Please upload a model first.</p>
                   </div>
                 )}
@@ -472,10 +468,10 @@ export default function PromptTestingPage() {
                     <div>
                       <Label htmlFor="model-select" className="text-white text-lg mb-2 block">Select a Model for Testing</Label>
                       <Select value={selectedModel} onValueChange={handleModelSelection}>
-                        <SelectTrigger id="model-select" className="bg-gray-700 text-white border-gray-600">
+                        <SelectTrigger id="model-select" className="bg-gray-800 text-white border-gray-700">
                           <SelectValue placeholder="Select a model" />
                         </SelectTrigger>
-                        <SelectContent className="bg-gray-700 text-white border-gray-600">
+                        <SelectContent className="bg-gray-800 text-white border-gray-700">
                           {modelOptions.map((option, idx) => (
                             <SelectItem key={idx} value={option}>{option}</SelectItem>
                           ))}
@@ -515,7 +511,7 @@ export default function PromptTestingPage() {
                                       <div>
                                         <Label className="text-white text-lg mb-2 block">Upload Test Data File</Label>
                                         <div
-                                          className="border-2 border-dashed border-gray-500 rounded-lg p-6 text-center cursor-pointer hover:border-gray-300 transition-colors"
+                                          className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-gray-600 transition-colors"
                                           onDragOver={(e) => e.preventDefault()}
                                           onDrop={(e) => {
                                             e.preventDefault();
@@ -536,7 +532,7 @@ export default function PromptTestingPage() {
                                             <p className="mt-2 text-sm text-white">
                                               Drag and drop file here or click to upload
                                             </p>
-                                            <p className="mt-1 text-xs text-gray-400">
+                                            <p className="mt-1 text-xs text-gray-300">
                                               Limit 200MB per file • JSON, CSV
                                             </p>
                                           </Label>
@@ -631,7 +627,7 @@ export default function PromptTestingPage() {
                                       </Select>
                                       {currentType === 'audio' ? (
                                         <div
-                                          className="mt-2 border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
+                                          className="mt-2 border-2 border-dashed border-gray-700 rounded-lg p-4 text-center cursor-pointer hover:border-gray-600 transition-colors"
                                           onDragOver={(e) => e.preventDefault()}
                                           onDrop={(e) => {
                                             e.preventDefault();
@@ -666,7 +662,7 @@ export default function PromptTestingPage() {
                                             <p className="mt-1 text-sm text-white">
                                               Drag and drop or click to upload {type.charAt(0).toUpperCase() + type.slice(1)} Audio
                                             </p>
-                                            <p className="mt-1 text-xs text-gray-400">
+                                            <p className="mt-1 text-xs text-gray-300">
                                               Limit 200MB per file • MP3, WAV
                                             </p>
                                           </Label>
@@ -715,7 +711,7 @@ export default function PromptTestingPage() {
                                       </Select>
                                       {currentType === 'image' ? (
                                         <div
-                                          className="mt-2 border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
+                                          className="mt-2 border-2 border-dashed border-gray-700 rounded-lg p-4 text-center cursor-pointer hover:border-gray-600 transition-colors"
                                           onDragOver={(e) => e.preventDefault()}
                                           onDrop={(e) => {
                                             e.preventDefault();
@@ -746,7 +742,7 @@ export default function PromptTestingPage() {
                                             <p className="mt-1 text-sm text-white">
                                               Drag and drop or click to upload {type.charAt(0).toUpperCase() + type.slice(1)} Image
                                             </p>
-                                            <p className="mt-1 text-xs text-gray-400">
+                                            <p className="mt-1 text-xs text-gray-300">
                                               Limit 200MB per file • PNG, JPG, JPEG
                                             </p>
                                           </Label>
@@ -783,7 +779,7 @@ export default function PromptTestingPage() {
                               <div>
                                 <Label className="text-white text-lg mb-2 block">Upload Prompt JSON</Label>
                                 <div
-                                  className="border-2 border-dashed border-gray-500 rounded-lg p-6 text-center cursor-pointer hover:border-gray-300 transition-colors"
+                                  className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-gray-600 transition-colors"
                                   onDragOver={(e) => e.preventDefault()}
                                   onDrop={(e) => {
                                     e.preventDefault();
@@ -804,7 +800,7 @@ export default function PromptTestingPage() {
                                     <p className="mt-2 text-sm text-white">
                                       Drag and drop Prompt JSON here or click to upload
                                     </p>
-                                    <p className="mt-1 text-xs text-gray-400">
+                                    <p className="mt-1 text-xs text-gray-300">
                                       Limit 200MB per file • JSON
                                     </p>
                                   </Label>
@@ -819,7 +815,7 @@ export default function PromptTestingPage() {
                               <div>
                                 <Label className="text-white text-lg mb-2 block">Upload Context TXT</Label>
                                 <div
-                                  className="border-2 border-dashed border-gray-500 rounded-lg p-6 text-center cursor-pointer hover:border-gray-300 transition-colors"
+                                  className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-gray-600 transition-colors"
                                   onDragOver={(e) => e.preventDefault()}
                                   onDrop={(e) => {
                                     e.preventDefault();
@@ -840,7 +836,7 @@ export default function PromptTestingPage() {
                                     <p className="mt-2 text-sm text-white">
                                       Drag and drop Context TXT here or click to upload
                                     </p>
-                                    <p className="mt-1 text-xs text-gray-400">
+                                    <p className="mt-1 text-xs text-gray-300">
                                       Limit 200MB per file • TXT
                                     </p>
                                   </Label>
@@ -866,36 +862,36 @@ export default function PromptTestingPage() {
 
                 {/* Display Evaluation Results with Individual Latency */}
                 {allResults.length > 0 && (
-                  <CardContent className="space-y-8">
+                  <div className="space-y-8 mt-8">
                     {allResults.map((resultSet, setIdx) => (
-                      <Card key={setIdx} className="bg-gray-700 border-gray-600 shadow-md">
-                        <CardHeader>
-                          <CardTitle className="text-xl font-bold text-white">Evaluation Set {setIdx + 1}</CardTitle>
+                      <Card key={setIdx} className="bg-gray-800 shadow-md rounded-lg overflow-hidden">
+                        <CardHeader className="bg-gray-700 text-white p-4">
+                          <CardTitle className="text-xl font-bold text-purple-400">Evaluation Set {setIdx + 1}</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4 overflow-y-auto max-h-96">
+                        <CardContent className="p-4 space-y-4 overflow-y-auto max-h-96 text-white">
                           {resultSet.map((result, idx) => (
-                            <div key={idx} className="border-b border-gray-600 pb-4">
-                              <h3 className="text-lg font-semibold text-white">Prompt: {result.prompt}</h3>
-                              <p className="text-gray-300">Response: {result.response}</p>
+                            <div key={idx} className="border-b border-gray-700 pb-4">
+                              <h3 className="text-lg font-semibold">Prompt: {result.prompt}</h3>
+                              <p>Response: {result.response}</p>
                               <p className="text-gray-400">Latency: {result.latency} ms</p>
                               <div className="mt-2">
                                 {Object.entries(result.factors).map(([factor, evaluation], factorIdx) => (
                                   <div key={factorIdx} className="mt-1">
-                                    <span className="text-gray-300 font-medium">{factor}:</span> {evaluation.score} - {evaluation.explanation}
+                                    <span className="font-medium">{factor}:</span> {evaluation.score} - {evaluation.explanation}
                                   </div>
                                 ))}
                               </div>
-                              <p className="text-gray-500 text-sm">Evaluated At: {new Date(result.evaluatedAt).toLocaleString()}</p>
+                              <p className="text-gray-400 text-sm mt-2">Evaluated At: {new Date(result.evaluatedAt).toLocaleString()}</p>
                             </div>
                           ))}
                         </CardContent>
                       </Card>
                     ))}
-                  </CardContent>
+                  </div>
                 )}
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         </main>
       </div>
 
