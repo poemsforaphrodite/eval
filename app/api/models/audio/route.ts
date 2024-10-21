@@ -49,28 +49,66 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const username = formData.get('username') as string;
     const modelName = formData.get('modelName') as string;
-    const promptAudio = formData.get('promptAudio') as File;
-    const contextAudio = formData.get('contextAudio') as File;
-    const responseAudio = formData.get('responseAudio') as File;
+    
+    const promptType = formData.get('promptType') as string;
+    const contextType = formData.get('contextType') as string;
+    const responseType = formData.get('responseType') as string;
 
-    if (!username || !modelName || !promptAudio || !contextAudio || !responseAudio) {
+    const promptAudio = formData.get('promptAudio') as File | null;
+    const contextAudio = formData.get('contextAudio') as File | null;
+    const responseAudio = formData.get('responseAudio') as File | null;
+
+    const promptText = formData.get('promptText') as string | null;
+    const contextText = formData.get('contextText') as string | null;
+    const responseText = formData.get('responseText') as string | null;
+
+    if (!username || !modelName) {
       return NextResponse.json(
-        { error: 'Missing required fields: username, modelName, promptAudio, contextAudio, or responseAudio.' },
+        { error: 'Missing required fields: username or modelName.' },
         { status: 400 }
       );
     }
 
-    // Convert File objects to Buffers
-    const promptBuffer = Buffer.from(await promptAudio.arrayBuffer());
-    const contextBuffer = Buffer.from(await contextAudio.arrayBuffer());
-    const responseBuffer = Buffer.from(await responseAudio.arrayBuffer());
+    let prompt, context, response;
 
-    // Transcribe audio files
-    const [prompt, context, response] = await Promise.all([
-      transcribeAudio(promptBuffer),
-      transcribeAudio(contextBuffer),
-      transcribeAudio(responseBuffer),
-    ]);
+    // Handle prompt
+    if (promptType === 'audio' && promptAudio) {
+      const promptBuffer = Buffer.from(await promptAudio.arrayBuffer());
+      prompt = await transcribeAudio(promptBuffer);
+    } else if (promptType === 'text' && promptText) {
+      prompt = promptText;
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid prompt data.' },
+        { status: 400 }
+      );
+    }
+
+    // Handle context
+    if (contextType === 'audio' && contextAudio) {
+      const contextBuffer = Buffer.from(await contextAudio.arrayBuffer());
+      context = await transcribeAudio(contextBuffer);
+    } else if (contextType === 'text' && contextText) {
+      context = contextText;
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid context data.' },
+        { status: 400 }
+      );
+    }
+
+    // Handle response
+    if (responseType === 'audio' && responseAudio) {
+      const responseBuffer = Buffer.from(await responseAudio.arrayBuffer());
+      response = await transcribeAudio(responseBuffer);
+    } else if (responseType === 'text' && responseText) {
+      response = responseText;
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid response data.' },
+        { status: 400 }
+      );
+    }
 
     // Prepare the transcribed data to send to the simple model's evaluation endpoint
     const evaluationData = {

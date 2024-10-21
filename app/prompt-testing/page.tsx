@@ -103,6 +103,16 @@ export default function PromptTestingPage() {
   // Update the results state to handle multiple sets of results
   const [allResults, setAllResults] = useState<EvaluationResult[][]>([]);
 
+  // New state variables for input types
+  const [promptInputType, setPromptInputType] = useState<'audio' | 'text'>('audio');
+  const [contextInputType, setContextInputType] = useState<'audio' | 'text'>('audio');
+  const [responseInputType, setResponseInputType] = useState<'audio' | 'text'>('audio');
+
+  // New state variables for text inputs
+  const [promptText, setPromptText] = useState<string>('');
+  const [contextText, setContextText] = useState<string>('');
+  const [responseText, setResponseText] = useState<string>('');
+
   useEffect(() => {
     const user = Cookies.get('username');
     if (user) {
@@ -232,7 +242,40 @@ export default function PromptTestingPage() {
       console.log('Starting test run...');
       let response;
 
-      if (inputType === 'text') {
+      if (inputType === 'audio') {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('modelName', modelName);
+        
+        formData.append('promptType', promptInputType);
+        formData.append('contextType', contextInputType);
+        formData.append('responseType', responseInputType);
+
+        if (promptInputType === 'audio' && promptAudio) {
+          formData.append('promptAudio', promptAudio);
+        } else if (promptInputType === 'text') {
+          formData.append('promptText', promptText);
+        }
+
+        if (contextInputType === 'audio' && contextAudio) {
+          formData.append('contextAudio', contextAudio);
+        } else if (contextInputType === 'text') {
+          formData.append('contextText', contextText);
+        }
+
+        if (responseInputType === 'audio' && responseAudio) {
+          formData.append('responseAudio', responseAudio);
+        } else if (responseInputType === 'text') {
+          formData.append('responseText', responseText);
+        }
+
+        console.log('Sending request to audio model API');
+        response = await axios.post<ApiResponse>('/api/models/audio', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } else if (inputType === 'text') {
         // Handle text input (simple and custom models)
         if (modelType === 'simple') {
           if (!file) {
@@ -290,27 +333,6 @@ export default function PromptTestingPage() {
         } else {
           throw new Error(`Unsupported model type: ${modelType}`);
         }
-      } else if (inputType === 'audio') {
-        // Handle audio input
-        if (!promptAudio || !contextAudio || !responseAudio) {
-          setErrors(['Please upload Prompt, Context, and Response audio files for audio testing.']);
-          setLoading(false);
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append('username', username);
-        formData.append('modelName', modelName);
-        formData.append('promptAudio', promptAudio);
-        formData.append('contextAudio', contextAudio);
-        formData.append('responseAudio', responseAudio);
-
-        console.log('Sending request to audio model API');
-        response = await axios.post<ApiResponse>('/api/models/audio', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
       } else if (inputType === 'image') {
         // Handle image input
         // Implement similar logic for image handling if applicable
@@ -560,57 +582,78 @@ export default function PromptTestingPage() {
 
                             {inputType === 'audio' && (
                               <div className="space-y-6">
-                                <Label className="text-white text-lg mb-2 block">Upload Audio Files</Label>
+                                <Label className="text-white text-lg mb-2 block">Upload Audio or Enter Text</Label>
                                 <div className="space-y-4">
-                                  {['prompt', 'context', 'response'].map((type) => (
+                                  {[
+                                    { type: 'prompt', setter: setPromptInputType, audioState: promptAudio, textState: promptText, textSetter: setPromptText, currentType: promptInputType },
+                                    { type: 'context', setter: setContextInputType, audioState: contextAudio, textState: contextText, textSetter: setContextText, currentType: contextInputType },
+                                    { type: 'response', setter: setResponseInputType, audioState: responseAudio, textState: responseText, textSetter: setResponseText, currentType: responseInputType }
+                                  ].map(({ type, setter, audioState, textState, textSetter, currentType }) => (
                                     <div key={type}>
-                                      <Label htmlFor={`${type}-audio`} className="text-white text-sm mb-1 block">
-                                        {type.charAt(0).toUpperCase() + type.slice(1)} Audio
+                                      <Label htmlFor={`${type}-input`} className="text-white text-sm mb-1 block">
+                                        {type.charAt(0).toUpperCase() + type.slice(1)} Input
                                       </Label>
-                                      <div
-                                        className="border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
-                                        onDragOver={(e) => e.preventDefault()}
-                                        onDrop={(e) => {
-                                          e.preventDefault();
-                                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                                            const file = e.dataTransfer.files[0];
-                                            if (type === 'prompt') setPromptAudio(file);
-                                            if (type === 'context') setContextAudio(file);
-                                            if (type === 'response') setResponseAudio(file);
-                                            setSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} audio dropped successfully!`);
-                                            setErrors([]);
-                                          }
-                                        }}
-                                      >
-                                        <Input
-                                          type="file"
-                                          id={`${type}-audio`}
-                                          accept=".mp3,.wav"
-                                          className="hidden"
-                                          onChange={(e) => {
-                                            if (e.target.files && e.target.files[0]) {
-                                              const file = e.target.files[0];
+                                      <Select onValueChange={(value) => setter(value as 'audio' | 'text')} value={currentType}>
+                                        <SelectTrigger id={`${type}-input`}>
+                                          <SelectValue placeholder="Select input type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="audio">Audio</SelectItem>
+                                          <SelectItem value="text">Text</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      {currentType === 'audio' ? (
+                                        <div
+                                          className="mt-2 border-2 border-dashed border-gray-500 rounded-lg p-4 text-center cursor-pointer hover:border-gray-300 transition-colors"
+                                          onDragOver={(e) => e.preventDefault()}
+                                          onDrop={(e) => {
+                                            e.preventDefault();
+                                            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                                              const file = e.dataTransfer.files[0];
                                               if (type === 'prompt') setPromptAudio(file);
                                               if (type === 'context') setContextAudio(file);
                                               if (type === 'response') setResponseAudio(file);
-                                              setSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} audio uploaded successfully!`);
+                                              setSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} audio dropped successfully!`);
                                               setErrors([]);
                                             }
                                           }}
+                                        >
+                                          <Input
+                                            type="file"
+                                            id={`${type}-audio`}
+                                            accept=".mp3,.wav"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                              if (e.target.files && e.target.files[0]) {
+                                                const file = e.target.files[0];
+                                                if (type === 'prompt') setPromptAudio(file);
+                                                if (type === 'context') setContextAudio(file);
+                                                if (type === 'response') setResponseAudio(file);
+                                                setSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} audio uploaded successfully!`);
+                                                setErrors([]);
+                                              }
+                                            }}
+                                          />
+                                          <Label htmlFor={`${type}-audio`} className="cursor-pointer">
+                                            <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                                            <p className="mt-1 text-sm text-white">
+                                              Drag and drop or click to upload {type.charAt(0).toUpperCase() + type.slice(1)} Audio
+                                            </p>
+                                            <p className="mt-1 text-xs text-gray-400">
+                                              Limit 200MB per file • MP3, WAV
+                                            </p>
+                                          </Label>
+                                        </div>
+                                      ) : (
+                                        <Input
+                                          type="text"
+                                          placeholder={`Enter ${type} text`}
+                                          value={textState}
+                                          onChange={(e) => textSetter(e.target.value)}
+                                          className="mt-2"
                                         />
-                                        <Label htmlFor={`${type}-audio`} className="cursor-pointer">
-                                          <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                                          <p className="mt-1 text-sm text-white">
-                                            Drag and drop or click to upload {type.charAt(0).toUpperCase() + type.slice(1)} Audio
-                                          </p>
-                                          <p className="mt-1 text-xs text-gray-400">
-                                            Limit 200MB per file • MP3, WAV
-                                          </p>
-                                        </Label>
-                                      </div>
-                                      {((type === 'prompt' && promptAudio) || 
-                                       (type === 'context' && contextAudio) || 
-                                       (type === 'response' && responseAudio)) && (
+                                      )}
+                                      {audioState && currentType === 'audio' && (
                                         <p className="mt-2 text-sm text-white">
                                           {type.charAt(0).toUpperCase() + type.slice(1)} audio selected
                                         </p>
