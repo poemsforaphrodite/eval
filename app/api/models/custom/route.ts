@@ -73,7 +73,8 @@ async function queryPinecone(prompt: string, modelId: string): Promise<string> {
     includeMetadata: true,
   });
 
-  return queryResponse.matches[0]?.metadata?.text || '';
+  // Convert the metadata.text to string, or return an empty string if it doesn't exist
+  return String(queryResponse.matches[0]?.metadata?.text || '');
 }
 
 async function evaluateWithTeacherModel(prompt: string, response: string, context: string): Promise<any> {
@@ -279,6 +280,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ results });
   } catch (error) {
     console.error('Error processing request:', error);
-    return NextResponse.json({ error: 'An error occurred while processing the request', details: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ error: 'An error occurred while processing the request', details: errorMessage }, { status: 500 });
   }
 }

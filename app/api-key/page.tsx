@@ -2,8 +2,8 @@ import { cookies } from 'next/headers';
 import { getUserApiKey } from '../lib/mongodb';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Key, Check } from "lucide-react";
-import Sidebar from '@/components/Sidebar';
 import CopyButton from '@/components/CopyButton';
+import ClientComponent from './ClientComponent';
 
 export default async function ApiKeyPage() {
   const cookieStore = cookies();
@@ -26,7 +26,7 @@ export default async function ApiKeyPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex">
-      <Sidebar />
+      <ClientComponent username={username} />
       <div className="flex-1 flex flex-col min-h-screen">
         <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Card className="bg-gray-900 border-gray-800">
