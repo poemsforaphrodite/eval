@@ -145,9 +145,8 @@ Do not include any additional text, explanations, or markdown formatting.
 }
 
 export async function POST(req: NextRequest) {
-  // Removed overall request latency measurement
   try {
-    const { testData, username, modelName } = await req.json(); // Ensure the frontend sends username and modelName
+    const { testData, username, modelName } = await req.json();
 
     if (!Array.isArray(testData)) {
       console.error('Invalid data format. Expected an array.');
@@ -178,41 +177,37 @@ export async function POST(req: NextRequest) {
             BiasDetection: { score: 0, explanation: 'Missing prompt, context, or response.' },
           },
           evaluatedAt: new Date(),
-          latency: 0, // Assign zero or appropriate value when evaluation is incomplete
+          latency: 0,
         };
       }
 
       const result = await evaluateResponse(prompt, context, response, username, modelName);
-      if (result) {
-        return result;
-      } else {
-        return {
-          username,
-          modelName,
-          prompt,
-          context,
-          response,
-          factors: {
-            Accuracy: { score: 0, explanation: 'Evaluation failed.' },
-            Hallucination: { score: 0, explanation: 'Evaluation failed.' },
-            Groundedness: { score: 0, explanation: 'Evaluation failed.' },
-            Relevance: { score: 0, explanation: 'Evaluation failed.' },
-            Recall: { score: 0, explanation: 'Evaluation failed.' },
-            Precision: { score: 0, explanation: 'Evaluation failed.' },
-            Consistency: { score: 0, explanation: 'Evaluation failed.' },
-            BiasDetection: { score: 0, explanation: 'Evaluation failed.' },
-          },
-          evaluatedAt: new Date(),
-          latency: 0, // Assign zero or appropriate value when evaluation fails
-        };
-      }
+      return result || {
+        username,
+        modelName,
+        prompt,
+        context,
+        response,
+        factors: {
+          Accuracy: { score: 0, explanation: 'Evaluation failed.' },
+          Hallucination: { score: 0, explanation: 'Evaluation failed.' },
+          Groundedness: { score: 0, explanation: 'Evaluation failed.' },
+          Relevance: { score: 0, explanation: 'Evaluation failed.' },
+          Recall: { score: 0, explanation: 'Evaluation failed.' },
+          Precision: { score: 0, explanation: 'Evaluation failed.' },
+          Consistency: { score: 0, explanation: 'Evaluation failed.' },
+          BiasDetection: { score: 0, explanation: 'Evaluation failed.' },
+        },
+        evaluatedAt: new Date(),
+        latency: 0,
+      };
     });
 
     const results = await Promise.all(evaluationPromises);
 
     // Save evaluation results to MongoDB
     const db = await connectToDatabase();
-    await db.collection('evaluation_results').insertMany(results); // Insert individual results with their own latency
+    await db.collection('evaluation_results').insertMany(results);
 
     return NextResponse.json({ results }, { status: 200 });
   } catch (error) {

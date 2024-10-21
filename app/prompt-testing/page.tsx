@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { PlayCircle, Upload, LogOut, Menu, Search, LayoutDashboard, TestTube, Settings, Map, TrendingDown } from "lucide-react";
+import { PlayCircle, Upload, LogOut, Menu } from "lucide-react";
 import Link from 'next/link';
 import { motion } from "framer-motion";
 import { useRouter } from 'next/navigation';
@@ -36,16 +36,14 @@ interface EvaluationResult {
     Consistency: { score: number; explanation: string };
     BiasDetection: { score: number; explanation: string };
   };
-  evaluatedAt: string; // Assuming backend returns ISO string
-  latency: number; // Latency in milliseconds
+  evaluatedAt: string;
+  latency: number;
 }
 
 interface ApiResponse {
   results: EvaluationResult[];
-  // Add other properties if needed
 }
 
-// Add this function at the top level of the file
 const chunkText = (text: string, chunkSize: number = 1000): string[] => {
   console.log('Chunking text...');
   const words = text.split(/\s+/);
@@ -83,11 +81,11 @@ export default function PromptTestingPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Add new state variables for Prompt JSON and Context TXT
+  // State variables for Prompt JSON and Context TXT
   const [promptJson, setPromptJson] = useState<string | null>(null);
   const [contextTxt, setContextTxt] = useState<string | null>(null);
 
-  // New state variables for audio functionality
+  // State variables for audio functionality
   const [promptAudio, setPromptAudio] = useState<File | null>(null);
   const [contextAudio, setContextAudio] = useState<File | null>(null);
   const [responseAudio, setResponseAudio] = useState<File | null>(null);
@@ -183,7 +181,7 @@ export default function PromptTestingPage() {
     reader.readAsText(file);
   };
 
-  // Add handlers for uploading Prompt JSON
+  // Handlers for uploading Prompt JSON
   const handlePromptJsonUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const reader = new FileReader();
@@ -201,7 +199,7 @@ export default function PromptTestingPage() {
     }
   };
 
-  // Add handlers for uploading Context TXT
+  // Handlers for uploading Context TXT
   const handleContextTxtUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const reader = new FileReader();
@@ -232,68 +230,95 @@ export default function PromptTestingPage() {
       const modelType = selectedModel.split(' (')[1].replace(')', '').toLowerCase();
 
       console.log('Starting test run...');
-      let requestData;
+      let response;
 
-      if (modelType === 'simple') {
-        // Keep the simple model logic unchanged
-        if (!file) {
-          setErrors(['Please upload a test data file (JSON or CSV) for the simple model.']);
-          setLoading(false);
-          return;
-        }
+      if (inputType === 'text') {
+        // Handle text input (simple and custom models)
+        if (modelType === 'simple') {
+          if (!file) {
+            setErrors(['Please upload a test data file (JSON or CSV) for the simple model.']);
+            setLoading(false);
+            return;
+          }
 
-        const fileContent = await readFileContent(file);
-        let testData;
+          const fileContent = await readFileContent(file);
+          let testData;
 
-        if (file.name.endsWith('.json')) {
-          testData = JSON.parse(fileContent);
-        } else if (file.name.endsWith('.csv')) {
-          testData = parseCSV(fileContent);
+          if (file.name.endsWith('.json')) {
+            testData = JSON.parse(fileContent);
+          } else if (file.name.endsWith('.csv')) {
+            testData = parseCSV(fileContent);
+          } else {
+            throw new Error('Unsupported file type');
+          }
+
+          const requestData = {
+            username,
+            modelName,
+            testData,
+          };
+
+          console.log('Sending request to simple model API:', requestData);
+          response = await axios.post<ApiResponse>('/api/models/simple', requestData);
+        } else if (modelType === 'custom' || modelType === 'huggingface') {
+          if (!promptJson || !contextTxt) {
+            setErrors(['Please upload both Prompt JSON and Context TXT files for the custom model.']);
+            setLoading(false);
+            return;
+          }
+
+          let parsedPrompts;
+          try {
+            parsedPrompts = JSON.parse(promptJson);
+          } catch (error) {
+            setErrors(['Invalid Prompt JSON format. Please check your file.']);
+            setLoading(false);
+            return;
+          }
+
+          const requestData = {
+            username,
+            modelName,
+            testData: parsedPrompts.map((prompt: string) => ({
+              prompt: { prompt },
+              context: contextTxt,
+            })),
+          };
+
+          console.log('Sending request to custom model API:', requestData);
+          response = await axios.post<ApiResponse>('/api/models/custom', requestData);
         } else {
-          throw new Error('Unsupported file type');
+          throw new Error(`Unsupported model type: ${modelType}`);
         }
-
-        requestData = {
-          username,
-          modelName,
-          testData,
-        };
-      } else if (modelType === 'custom') {
-        if (!promptJson || !contextTxt) {
-          setErrors(['Please upload both Prompt JSON and Context TXT files for the custom model.']);
+      } else if (inputType === 'audio') {
+        // Handle audio input
+        if (!promptAudio || !contextAudio || !responseAudio) {
+          setErrors(['Please upload Prompt, Context, and Response audio files for audio testing.']);
           setLoading(false);
           return;
         }
 
-        let parsedPrompts;
-        try {
-          parsedPrompts = JSON.parse(promptJson);
-        } catch (error) {
-          setErrors(['Invalid Prompt JSON format. Please check your file.']);
-          setLoading(false);
-          return;
-        }
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('modelName', modelName);
+        formData.append('promptAudio', promptAudio);
+        formData.append('contextAudio', contextAudio);
+        formData.append('responseAudio', responseAudio);
 
-        requestData = {
-          username,
-          modelName,
-          testData: parsedPrompts.map((prompt: string) => ({
-            prompt: { prompt },
-            context: contextTxt,
-          })),
-        };
+        console.log('Sending request to audio model API');
+        response = await axios.post<ApiResponse>('/api/models/audio', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } else if (inputType === 'image') {
+        // Handle image input
+        // Implement similar logic for image handling if applicable
+        setErrors(['Image input handling is not yet implemented.']);
+        setLoading(false);
+        return;
       } else {
-        throw new Error(`Unsupported model type: ${modelType}`);
-      }
-
-      console.log('Sending request to API:', requestData);
-      let response: AxiosResponse<ApiResponse>;
-      if (modelType === 'simple') {
-        response = await axios.post<ApiResponse>('/api/models/simple', requestData);
-      } else if (modelType === 'custom') {
-        response = await axios.post<ApiResponse>('/api/models/custom', requestData);
-      } else {
-        throw new Error(`Unsupported model type: ${modelType}`);
+        throw new Error(`Unsupported input type: ${inputType}`);
       }
 
       console.log('Received response from API:', response.data);
@@ -326,6 +351,20 @@ export default function PromptTestingPage() {
   const parseCSV = (csvContent: string) => {
     // Implement CSV parsing logic here
     // Return an array of objects representing the CSV data
+    // Example implementation using PapaParse or a similar library
+    const rows = csvContent.split('\n').filter(row => row.trim() !== '');
+    const headers = rows[0].split(',').map(header => header.trim());
+
+    const data = rows.slice(1).map(row => {
+      const values = row.split(',').map(value => value.trim());
+      const entry: any = {};
+      headers.forEach((header, idx) => {
+        entry[header] = values[idx];
+      });
+      return entry;
+    });
+
+    return data;
   };
 
   const handleLogout = () => {
@@ -569,13 +608,13 @@ export default function PromptTestingPage() {
                                           </p>
                                         </Label>
                                       </div>
-                                      {(type === 'prompt' && promptAudio) || 
+                                      {((type === 'prompt' && promptAudio) || 
                                        (type === 'context' && contextAudio) || 
-                                       (type === 'response' && responseAudio) ? (
+                                       (type === 'response' && responseAudio)) && (
                                         <p className="mt-2 text-sm text-white">
                                           {type.charAt(0).toUpperCase() + type.slice(1)} audio selected
                                         </p>
-                                      ) : null}
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -632,13 +671,13 @@ export default function PromptTestingPage() {
                                           </p>
                                         </Label>
                                       </div>
-                                      {(type === 'prompt' && promptImage) || 
+                                      {((type === 'prompt' && promptImage) || 
                                        (type === 'context' && contextImage) || 
-                                       (type === 'response' && responseImage) ? (
+                                       (type === 'response' && responseImage)) && (
                                         <p className="mt-2 text-sm text-white">
                                           {type.charAt(0).toUpperCase() + type.slice(1)} image selected
                                         </p>
-                                      ) : null}
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -650,7 +689,7 @@ export default function PromptTestingPage() {
                             </Button>
                           </>
                         );
-                      } else if (modelType === 'custom') {
+                      } else if (modelType === 'custom' || modelType === 'huggingface') {
                         return (
                           <>
                             <div className="flex flex-col space-y-6">

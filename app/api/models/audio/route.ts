@@ -2,6 +2,11 @@
 import OpenAI from 'openai';
 import { connectToDatabase } from '../../../lib/mongodb';
 import { NextRequest, NextResponse } from 'next/server';
+import axios from 'axios';
+import { Readable } from 'stream';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 // Add this new configuration
 export const runtime = 'nodejs';
@@ -12,169 +17,80 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-interface FactorEvaluation {
-  score: number;
-  explanation: string;
-}
-
-interface EvaluationResult {
-  username: string;
-  modelName: string;
-  prompt: string;
-  context: string;
-  response: string;
-  factors: {
-    Accuracy: FactorEvaluation;
-    Hallucination: FactorEvaluation;
-    Groundedness: FactorEvaluation;
-    Relevance: FactorEvaluation;
-    Recall: FactorEvaluation;
-    Precision: FactorEvaluation;
-    Consistency: FactorEvaluation;
-    BiasDetection: FactorEvaluation;
-  };
-  evaluatedAt: Date;
-}
-
-async function evaluateResponse(prompt: string, context: string, response: string, username: string, modelName: string): Promise<EvaluationResult | null> {
+async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
+  const tempFilePath = path.join(os.tmpdir(), `audio-${Date.now()}.mp3`);
+  
   try {
-    const evaluationPrompt = `
-Evaluate the following response based on the given prompt and context. 
-Rate each factor on a scale of 0 to 1, where 1 is the best (or least problematic for negative factors like Hallucination and Bias).
-Please provide scores with two decimal places, and avoid extreme scores of exactly 0 or 1 unless absolutely necessary.
+    // Write buffer to temporary file
+    await fs.promises.writeFile(tempFilePath, audioBuffer);
 
-Context: ${context}
-Prompt: ${prompt}
-Response: ${response}
+    // Create a read stream from the temporary file
+    const fileStream = fs.createReadStream(tempFilePath);
 
-Factors to evaluate:
-1. Accuracy: How factually correct is the response?
-2. Hallucination: To what extent does the response contain made-up information? (Higher score means less hallucination)
-3. Groundedness: How well is the response grounded in the given context and prompt?
-4. Relevance: How relevant is the response to the prompt?
-5. Recall: How much of the relevant information from the context is included in the response?
-6. Precision: How precise and focused is the response in addressing the prompt?
-7. Consistency: How consistent is the response with the given information and within itself?
-8. BiasDetection: To what extent is the response free from bias? (Higher score means less bias)
-
-Provide the evaluation as a JSON object. Each factor should be a key mapping to an object containing 'score' and 'explanation'. 
-Do not include any additional text, explanations, or markdown formatting.
-    `;
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: 'You are an expert evaluator of language model responses.' },
-        { role: 'user', content: evaluationPrompt },
-      ],
-      temperature: 0, // Set temperature to 0 for deterministic output
+    const transcription = await openai.audio.transcriptions.create({
+      file: fileStream,
+      model: "whisper-1",
     });
 
-    const content = completion.choices[0].message.content?.trim();
-
-    // Validate JSON format
-    if (!content || !content.startsWith('{') || !content.endsWith('}')) {
-      console.error('Evaluation did not return a valid JSON object.');
-      console.error(`Response content: ${content}`);
-      return null;
-    }
-
+    return transcription.text;
+  } finally {
+    // Clean up: delete the temporary file
     try {
-      const evaluation: { [key: string]: { score: number; explanation: string } } = JSON.parse(content);
-
-      // Ensure all required factors are present
-      const requiredFactors = [
-        'Accuracy',
-        'Hallucination',
-        'Groundedness',
-        'Relevance',
-        'Recall',
-        'Precision',
-        'Consistency',
-        'BiasDetection',
-      ];
-
-      for (const factor of requiredFactors) {
-        if (!(factor in evaluation)) {
-          console.error(`Missing factor in evaluation: ${factor}`);
-          return null;
-        }
-      }
-
-      return {
-        username,
-        modelName,
-        prompt,
-        context,
-        response,
-        factors: evaluation as {
-          Accuracy: FactorEvaluation;
-          Hallucination: FactorEvaluation;
-          Groundedness: FactorEvaluation;
-          Relevance: FactorEvaluation;
-          Recall: FactorEvaluation;
-          Precision: FactorEvaluation;
-          Consistency: FactorEvaluation;
-          BiasDetection: FactorEvaluation;
-        },
-        evaluatedAt: new Date(),
-      };
-    } catch (e) {
-      console.error(`Error decoding evaluation response: ${e}`);
-      console.error(`Response content: ${content}`);
-      return null;
+      await fs.promises.unlink(tempFilePath);
+    } catch (error) {
+      console.error('Error deleting temporary file:', error);
+      // Don't throw an error here, as it's not critical to the main operation
     }
-  } catch (error) {
-    console.error(`Error in evaluation: ${error}`);
-    return null;
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    // Use NextRequest's json() method with error handling
-    const body = await req.json().catch(e => {
-      console.error('Error parsing request body:', e);
-      return null;
+    const formData = await req.formData();
+    const username = formData.get('username') as string;
+    const modelName = formData.get('modelName') as string;
+    const promptAudio = formData.get('promptAudio') as File;
+    const contextAudio = formData.get('contextAudio') as File;
+    const responseAudio = formData.get('responseAudio') as File;
+
+    if (!username || !modelName || !promptAudio || !contextAudio || !responseAudio) {
+      return NextResponse.json(
+        { error: 'Missing required fields: username, modelName, promptAudio, contextAudio, or responseAudio.' },
+        { status: 400 }
+      );
+    }
+
+    // Convert File objects to Buffers
+    const promptBuffer = Buffer.from(await promptAudio.arrayBuffer());
+    const contextBuffer = Buffer.from(await contextAudio.arrayBuffer());
+    const responseBuffer = Buffer.from(await responseAudio.arrayBuffer());
+
+    // Transcribe audio files
+    const [prompt, context, response] = await Promise.all([
+      transcribeAudio(promptBuffer),
+      transcribeAudio(contextBuffer),
+      transcribeAudio(responseBuffer),
+    ]);
+
+    // Prepare the transcribed data to send to the simple model's evaluation endpoint
+    const evaluationData = {
+      username,
+      modelName,
+      testData: [{ prompt, context, response }]
+    };
+
+    // Send transcribed data to the simple route for evaluation
+    const evaluationResponse = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/models/simple`, evaluationData, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
 
-    if (!body) {
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body.' },
-        { status: 400 }
-      );
-    }
-
-    const { username, modelName, prompt, context, response } = body;
-
-    if (!username || !modelName || !prompt || !context || !response) {
-      return NextResponse.json(
-        { error: 'Missing required fields: username, modelName, prompt, context, or response.' },
-        { status: 400 }
-      );
-    }
-
-    const result = await evaluateResponse(prompt, context, response, username, modelName);
-
-    if (result) {
-      // Save evaluation result to MongoDB
-      const db = await connectToDatabase();
-      await db.collection('evaluation_results').insertOne({
-        ...result,
-        inputType: 'audio',
-      });
-
-      return NextResponse.json({ success: true, result }, { status: 200 });
-    } else {
-      return NextResponse.json(
-        { error: 'Failed to evaluate the response.' },
-        { status: 500 }
-      );
-    }
-  } catch (error) {
+    return NextResponse.json(evaluationResponse.data, { status: 200 });
+  } catch (error: any) {
     console.error('Error in POST function:', error);
     return NextResponse.json(
-      { error: 'Failed to process the evaluation request.', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to process the audio evaluation request.', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
