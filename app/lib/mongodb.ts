@@ -55,3 +55,11 @@ export async function getUsers(): Promise<Document[]> {
   // Fetch all users, excluding the password field
   return users.find({}, { projection: { password: 0 } }).toArray();
 }
+
+// Add this new function
+export async function getUserApiKey(username: string): Promise<string | null> {
+  const db = await getDatabase();
+  const users = db.collection('users');
+  const user = await users.findOne({ username }, { projection: { apiKey: 1 } });
+  return user ? user.apiKey : null;
+}
