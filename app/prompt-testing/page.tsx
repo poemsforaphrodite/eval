@@ -616,11 +616,11 @@ export default function PromptTestingPage() {
                                       <Label htmlFor={`${type}-input`} className="text-white text-sm mb-1 block">
                                         {type.charAt(0).toUpperCase() + type.slice(1)} Input
                                       </Label>
-                                      <Select onValueChange={(value) => setter(value as 'audio' | 'text')} value={currentType}>
-                                        <SelectTrigger id={`${type}-input`}>
+                                      <Select onValueChange={(value) => setter(value as 'audio' | 'text')} value={currentType} className="text-white">
+                                        <SelectTrigger id={`${type}-input`} className="bg-gray-800 text-white border-gray-700">
                                           <SelectValue placeholder="Select input type" />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="bg-gray-800 text-white border-gray-700">
                                           <SelectItem value="audio">Audio</SelectItem>
                                           <SelectItem value="text">Text</SelectItem>
                                         </SelectContent>
@@ -673,7 +673,7 @@ export default function PromptTestingPage() {
                                           placeholder={`Enter ${type} text`}
                                           value={textState}
                                           onChange={(e) => textSetter(e.target.value)}
-                                          className="mt-2"
+                                          className="mt-2 bg-gray-800 text-white border-gray-700"
                                         />
                                       )}
                                       {audioState && currentType === 'audio' && (
@@ -700,11 +700,11 @@ export default function PromptTestingPage() {
                                       <Label htmlFor={`${type}-input`} className="text-white text-sm mb-1 block">
                                         {type.charAt(0).toUpperCase() + type.slice(1)} Input
                                       </Label>
-                                      <Select onValueChange={(value) => setter(value as 'image' | 'text')} value={currentType}>
-                                        <SelectTrigger id={`${type}-input`}>
+                                      <Select onValueChange={(value) => setter(value as 'image' | 'text')} value={currentType} className="text-white">
+                                        <SelectTrigger id={`${type}-input`} className="bg-gray-800 text-white border-gray-700">
                                           <SelectValue placeholder="Select input type" />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="bg-gray-800 text-white border-gray-700">
                                           <SelectItem value="image">Image</SelectItem>
                                           <SelectItem value="text">Text</SelectItem>
                                         </SelectContent>
@@ -753,7 +753,7 @@ export default function PromptTestingPage() {
                                           placeholder={`Enter ${type} text`}
                                           value={textState}
                                           onChange={(e) => textSetter(e.target.value)}
-                                          className="mt-2"
+                                          className="mt-2 bg-gray-800 text-white border-gray-700"
                                         />
                                       )}
                                       {imageState && currentType === 'image' && (
