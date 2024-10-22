@@ -209,11 +209,15 @@ export async function POST(req: NextRequest) {
     const db = await connectToDatabase();
     await db.collection('evaluation_results').insertMany(results);
 
-    return NextResponse.json({ results }, { status: 200 });
+    // Return the response in the expected format
+    return NextResponse.json({ 
+      success: true, 
+      result: results[0] // Return the first result as the client expects a single result
+    }, { status: 200 });
   } catch (error) {
     console.error('Error in POST function:', error);
     return NextResponse.json(
-      { error: 'Failed to process the evaluation request.' },
+      { success: false, error: 'Failed to process the evaluation request.' },
       { status: 500 }
     );
   }

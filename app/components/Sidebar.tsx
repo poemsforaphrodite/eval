@@ -78,11 +78,23 @@ export default function Sidebar({ onLogout }: SidebarProps) {
             <Layers className="w-5 h-5 mr-2" /> Playground
           </Button>
         </Link>
-        
+                
+        <Link href="/users" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+            <Users className="w-5 h-5 mr-2" /> Users
+          </Button>
+        </Link>
+        <Link href="/ab-testing" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+            <SplitSquareVertical className="w-5 h-5 mr-2" /> A/B Testing
+          </Button>
+        </Link>
         {/* Convert the rest to non-clickable buttons */}
-        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
-          <FileText className="w-5 h-5 mr-2" /> API Reference
-        </Button>
+        <Link href="/api-reference" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+            <FileText className="w-5 h-5 mr-2" /> API Reference
+          </Button>
+        </Link>
         <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
           <Database className="w-5 h-5 mr-2" /> Test Sets
         </Button>
@@ -110,15 +122,8 @@ export default function Sidebar({ onLogout }: SidebarProps) {
         <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
           <Box className="w-5 h-5 mr-2" /> Models
         </Button>
-        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
-          <SplitSquareVertical className="w-5 h-5 mr-2" /> A/B Testing
-        </Button>
         
-        <Link href="/users" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <Users className="w-5 h-5 mr-2" /> Users
-          </Button>
-        </Link>
+
         
         {/* Continue with the rest of the non-clickable buttons */}
         <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">

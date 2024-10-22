@@ -149,7 +149,7 @@ export default function Dashboard() {
         
         // Calculate summary data
         //test
-        const totalLatency = data.evaluations.reduce((sum: number, evaluation) => sum + (evaluation.latency || 0), 0);
+        const totalLatency = data.evaluations.reduce((sum: number, evaluation: { latency?: number }) => sum + (evaluation.latency || 0), 0);
         const averageLatency = totalLatency / data.evaluations.length;
 
         // Calculate average scores for all factors

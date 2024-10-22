@@ -45,6 +45,9 @@ interface ApiResponse {
   result: EvaluationResult;
 }
 
+// Add this type definition at the top of your file, outside of any component
+type PromptInputType = 'text' | 'image' | 'audio';
+
 const chunkText = (text: string, chunkSize: number = 1000): string[] => {
   console.log('Chunking text...');
   const words = text.split(/\s+/);
@@ -105,9 +108,9 @@ export default function PromptTestingPage() {
   const [allResults, setAllResults] = useState<EvaluationResult[][]>([]);
 
   // New state variables for input types
-  const [promptInputType, setPromptInputType] = useState<'image' | 'text'>('image');
-  const [contextInputType, setContextInputType] = useState<'image' | 'text'>('image');
-  const [responseInputType, setResponseInputType] = useState<'image' | 'text'>('image');
+  const [promptInputType, setPromptInputType] = useState<PromptInputType>('text');
+  const [contextInputType, setContextInputType] = useState<'image' | 'text' | 'audio'>('image');
+  const [responseInputType, setResponseInputType] = useState<'image' | 'text' | 'audio'>('image');
 
   // New state variables for text inputs
   const [promptText, setPromptText] = useState<string>('');
@@ -329,6 +332,15 @@ export default function PromptTestingPage() {
             throw new Error('Unsupported file type');
           }
 
+          // Validate the parsed data
+          if (!Array.isArray(testData) || testData.length === 0 || !testData[0].prompt || !testData[0].context) {
+            setErrors(['Invalid data format. Please check your CSV or JSON file.']);
+            setLoading(false);
+            return;
+          }
+
+          console.log('Parsed test data:', JSON.stringify(testData, null, 2));
+
           const requestData = {
             username,
             modelName,
@@ -399,20 +411,38 @@ export default function PromptTestingPage() {
 
   // You'll need to implement this function to parse CSV data
   const parseCSV = (csvContent: string) => {
-    // Implement CSV parsing logic here
-    // Return an array of objects representing the CSV data
-    // Example implementation using PapaParse or a similar library
     const rows = csvContent.split('\n').filter(row => row.trim() !== '');
     const headers = rows[0].split(',').map(header => header.trim());
 
-    const data = rows.slice(1).map(row => {
-      const values = row.split(',').map(value => value.trim());
-      const entry: any = {};
-      headers.forEach((header, idx) => {
-        entry[header] = values[idx];
-      });
-      return entry;
-    });
+    const data = [];
+    let currentRow = { prompt: '', context: '', response: '' };
+    let inQuotes = false;
+    let currentField = 'prompt';
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      for (let j = 0; j < row.length; j++) {
+        const char = row[j];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          if (currentField === 'prompt') {
+            currentField = 'context';
+          } else if (currentField === 'context') {
+            currentField = 'response';
+          }
+        } else {
+          currentRow[currentField] += char;
+        }
+      }
+      if (!inQuotes) {
+        data.push({ ...currentRow });
+        currentRow = { prompt: '', context: '', response: '' };
+        currentField = 'prompt';
+      } else {
+        currentRow[currentField] += '\n';
+      }
+    }
 
     return data;
   };
