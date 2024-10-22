@@ -78,106 +78,70 @@ export default function Sidebar({ onLogout }: SidebarProps) {
             <Layers className="w-5 h-5 mr-2" /> Playground
           </Button>
         </Link>
-        <Link href="/api-reference" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <FileText className="w-5 h-5 mr-2" /> API Reference
-          </Button>
-        </Link>
-        <Link href="/test-sets" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <Database className="w-5 h-5 mr-2" /> Test Sets
-          </Button>
-        </Link>
-        <Link href="/logs" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <Activity className="w-5 h-5 mr-2" /> Logs
-          </Button>
-        </Link>
-        <Link href="/threads" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <GitBranch className="w-5 h-5 mr-2" /> Threads
-          </Button>
-        </Link>
-        <Link href="/evaluators" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <UserCheck className="w-5 h-5 mr-2" /> Evaluators
-          </Button>
-        </Link>
-        <Link href="/lab" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <Beaker className="w-5 h-5 mr-2" /> Lab
-          </Button>
-        </Link>
-        <Link href="/prompts" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <MessageSquare className="w-5 h-5 mr-2" /> Prompts
-          </Button>
-        </Link>
-        <Link href="/caches" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <Archive className="w-5 h-5 mr-2" /> Caches
-          </Button>
-        </Link>
-        <Link href="/datasets" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <DatasetIcon className="w-5 h-5 mr-2" /> Datasets
-          </Button>
-        </Link>
-        <Link href="/models" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <Box className="w-5 h-5 mr-2" /> Models
-          </Button>
-        </Link>
-        <Link href="/ab-testing" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <SplitSquareVertical className="w-5 h-5 mr-2" /> A/B Testing
-          </Button>
-        </Link>
+        
+        {/* Convert the rest to non-clickable buttons */}
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <FileText className="w-5 h-5 mr-2" /> API Reference
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <Database className="w-5 h-5 mr-2" /> Test Sets
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <Activity className="w-5 h-5 mr-2" /> Logs
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <GitBranch className="w-5 h-5 mr-2" /> Threads
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <UserCheck className="w-5 h-5 mr-2" /> Evaluators
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <Beaker className="w-5 h-5 mr-2" /> Lab
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <MessageSquare className="w-5 h-5 mr-2" /> Prompts
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <Archive className="w-5 h-5 mr-2" /> Caches
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <DatasetIcon className="w-5 h-5 mr-2" /> Datasets
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <Box className="w-5 h-5 mr-2" /> Models
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <SplitSquareVertical className="w-5 h-5 mr-2" /> A/B Testing
+        </Button>
+        
         <Link href="/users" className="block">
           <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
             <Users className="w-5 h-5 mr-2" /> Users
           </Button>
         </Link>
-        <Link href="/guardrails" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <Shield className="w-5 h-5 mr-2" /> Guardrails
-          </Button>
-        </Link>
-        <Link href="/observability" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <Eye className="w-5 h-5 mr-2" /> Observability
-          </Button>
-        </Link>
-        {/* Add new links */}
-        <Link href="/custom-metrics" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <BarChart2 className="w-5 h-5 mr-2" /> Custom Metrics
-          </Button>
-        </Link>
-        <Link href="/reports" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <FileBarChart className="w-5 h-5 mr-2" /> Reports
-          </Button>
-        </Link>
         
-        {/* Add new links */}
-        <Link href="/notifications" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <Bell className="w-5 h-5 mr-2" /> Notifications
-          </Button>
-        </Link>
-        <Link href="/time-span" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <Clock className="w-5 h-5 mr-2" /> Time Span
-          </Button>
-        </Link>
-        
-        {/* Add new link */}
-        <Link href="/custom-metric-marketplace" className="block">
-          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
-            <ShoppingBag className="w-5 h-5 mr-2" /> Custom Metric Marketplace
-          </Button>
-        </Link>
+        {/* Continue with the rest of the non-clickable buttons */}
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <Shield className="w-5 h-5 mr-2" /> Guardrails
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <Eye className="w-5 h-5 mr-2" /> Observability
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <BarChart2 className="w-5 h-5 mr-2" /> Custom Metrics
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <FileBarChart className="w-5 h-5 mr-2" /> Reports
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <Bell className="w-5 h-5 mr-2" /> Notifications
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <Clock className="w-5 h-5 mr-2" /> Time Span
+        </Button>
+        <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
+          <ShoppingBag className="w-5 h-5 mr-2" /> Custom Metric Marketplace
+        </Button>
       </nav>
       <div className="p-4">
         <Button
