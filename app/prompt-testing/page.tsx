@@ -246,7 +246,70 @@ export default function PromptTestingPage() {
       console.log('Starting test run...');
       let response;
 
-      if (inputType === 'image') {
+      if (inputType === 'text' && modelType === 'simple') {
+        // Handle direct text input
+        if (file) {
+          const fileContent = await readFileContent(file);
+          let testData;
+
+          if (file.name.endsWith('.json')) {
+            testData = JSON.parse(fileContent);
+          } else if (file.name.endsWith('.csv')) {
+            testData = parseCSV(fileContent);
+          } else {
+            throw new Error('Unsupported file type');
+          }
+
+          // Validate the parsed data
+          if (!Array.isArray(testData) || testData.length === 0 || !testData[0].prompt || !testData[0].context) {
+            setErrors(['Invalid data format. Please check your CSV or JSON file.']);
+            setLoading(false);
+            return;
+          }
+
+          console.log('Parsed test data:', JSON.stringify(testData, null, 2));
+
+          const requestData = {
+            username,
+            modelName,
+            testData,
+          };
+
+          console.log('Sending request to simple model API:', requestData);
+          response = await axios.post<ApiResponse>('/api/models/simple', requestData);
+        } else {
+          // Handle text input
+          const prompts = promptText.split('\n').filter(p => p.trim());
+          const responses = responseText.split('\n').filter(r => r.trim());
+
+          if (prompts.length !== responses.length) {
+            setErrors(['Number of prompts must match number of responses.']);
+            setLoading(false);
+            return;
+          }
+
+          if (!contextText.trim()) {
+            setErrors(['Context is required.']);
+            setLoading(false);
+            return;
+          }
+
+          const testData = prompts.map((prompt, index) => ({
+            prompt: prompt.trim(),
+            context: contextText.trim(),
+            response: responses[index].trim()
+          }));
+
+          const requestData = {
+            username,
+            modelName,
+            testData,
+          };
+
+          console.log('Sending request to simple model API:', requestData);
+          response = await axios.post<ApiResponse>('/api/models/simple', requestData);
+        }
+      } else if (inputType === 'image') {
         const formData = new FormData();
         formData.append('username', username);
         formData.append('modelName', modelName);
@@ -312,75 +375,6 @@ export default function PromptTestingPage() {
             'Content-Type': 'multipart/form-data',
           },
         });
-      } else if (inputType === 'text') {
-        // Handle text input (simple and custom models)
-        if (modelType === 'simple') {
-          if (!file) {
-            setErrors(['Please upload a test data file (JSON or CSV) for the simple model.']);
-            setLoading(false);
-            return;
-          }
-
-          const fileContent = await readFileContent(file);
-          let testData;
-
-          if (file.name.endsWith('.json')) {
-            testData = JSON.parse(fileContent);
-          } else if (file.name.endsWith('.csv')) {
-            testData = parseCSV(fileContent);
-          } else {
-            throw new Error('Unsupported file type');
-          }
-
-          // Validate the parsed data
-          if (!Array.isArray(testData) || testData.length === 0 || !testData[0].prompt || !testData[0].context) {
-            setErrors(['Invalid data format. Please check your CSV or JSON file.']);
-            setLoading(false);
-            return;
-          }
-
-          console.log('Parsed test data:', JSON.stringify(testData, null, 2));
-
-          const requestData = {
-            username,
-            modelName,
-            testData,
-          };
-
-          console.log('Sending request to simple model API:', requestData);
-          response = await axios.post<ApiResponse>('/api/models/simple', requestData);
-        } else if (modelType === 'custom' || modelType === 'huggingface') {
-          if (!promptJson || !contextTxt) {
-            setErrors(['Please upload both Prompt JSON and Context TXT files for the custom model.']);
-            setLoading(false);
-            return;
-          }
-
-          let parsedPrompts;
-          try {
-            parsedPrompts = JSON.parse(promptJson);
-          } catch (error) {
-            setErrors(['Invalid Prompt JSON format. Please check your file.']);
-            setLoading(false);
-            return;
-          }
-
-          const requestData = {
-            username,
-            modelName,
-            testData: parsedPrompts.map((prompt: string) => ({
-              prompt: { prompt },
-              context: contextTxt,
-            })),
-          };
-
-          console.log('Sending request to custom model API:', requestData);
-          response = await axios.post<ApiResponse>('/api/models/custom', requestData);
-        } else {
-          throw new Error(`Unsupported model type: ${modelType}`);
-        }
-      } else {
-        throw new Error(`Unsupported input type: ${inputType}`);
       }
 
       console.log('Received response from API:', response.data);
@@ -533,103 +527,71 @@ export default function PromptTestingPage() {
                             </div>
 
                             {inputType === 'text' && (
-                              <div>
-                                {(() => {
-                                  const modelType = selectedModel.split(' (')[1].replace(')', '').toLowerCase();
-                                  if (modelType === 'simple') {
-                                    return (
-                                      <div>
-                                        <Label className="text-white text-lg mb-2 block">Upload Test Data File</Label>
-                                        <div
-                                          className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-gray-600 transition-colors"
-                                          onDragOver={(e) => e.preventDefault()}
-                                          onDrop={(e) => {
-                                            e.preventDefault();
-                                            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                                              handleFileChange({ target: { files: e.dataTransfer.files } } as React.ChangeEvent<HTMLInputElement>);
-                                            }
-                                          }}
-                                        >
-                                          <Input
-                                            type="file"
-                                            className="hidden"
-                                            onChange={handleFileChange}
-                                            accept=".json,.csv"
-                                            id="file-upload"
-                                          />
-                                          <Label htmlFor="file-upload" className="cursor-pointer">
-                                            <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                                            <p className="mt-2 text-sm text-white">
-                                              Drag and drop file here or click to upload
-                                            </p>
-                                            <p className="mt-1 text-xs text-gray-300">
-                                              Limit 200MB per file • JSON, CSV
-                                            </p>
-                                          </Label>
-                                        </div>
-                                        {file && (
-                                          <p className="mt-2 text-sm text-white">
-                                            Selected file: {file.name}
-                                          </p>
-                                        )}
-                                      </div>
-                                    );
-                                  } else if (modelType === 'custom' || modelType === 'huggingface') {
-                                    return (
-                                      <div>
-                                        <Label>Upload Context Dataset (TXT)</Label>
-                                        <Input
-                                          type="file"
-                                          onChange={(e) => {
-                                            if (e.target.files && e.target.files[0]) {
-                                              const reader = new FileReader();
-                                              reader.onload = () => {
-                                                setContextDataset(reader.result as string);
-                                                setSuccess('Context file uploaded successfully!');
-                                                setErrors([]);
-                                              };
-                                              reader.readAsText(e.target.files[0]);
-                                            }
-                                          }}
-                                          accept=".txt"
-                                        />
-                                        {contextDataset && (
-                                          <p className="mt-2 text-sm text-white">
-                                            Context file uploaded: {contextDataset.substring(0, 20)}...
-                                          </p>
-                                        )}
+                              <div className="space-y-4">
+                                <div>
+                                  <Label className="text-white text-lg mb-2 block">Enter Prompts (one per line)</Label>
+                                  <textarea
+                                    className="w-full h-32 p-2 bg-gray-800 text-white border border-gray-700 rounded-md"
+                                    placeholder="Enter prompts, one per line..."
+                                    value={promptText}
+                                    onChange={(e) => setPromptText(e.target.value)}
+                                  />
+                                </div>
 
-                                        <Label className="mt-4">Upload Questions JSON</Label>
-                                        <Input
-                                          type="file"
-                                          onChange={(e) => {
-                                            if (e.target.files && e.target.files[0]) {
-                                              const reader = new FileReader();
-                                              reader.onload = () => {
-                                                try {
-                                                  const questions = JSON.parse(reader.result as string);
-                                                  setQuestionsJson(JSON.stringify(questions));
-                                                  setSuccess('Questions file uploaded successfully!');
-                                                  setErrors([]);
-                                                } catch {
-                                                  setErrors(['Invalid Questions JSON format. Please check your file.']);
-                                                }
-                                              };
-                                              reader.readAsText(e.target.files[0]);
-                                            }
-                                          }}
-                                          accept=".json"
-                                        />
-                                        {questionsJson && (
-                                          <p className="mt-2 text-sm text-white">
-                                            Questions file uploaded: {questionsJson.substring(0, 20)}...
-                                          </p>
-                                        )}
-                                      </div>
-                                    );
-                                  }
-                                  return null;
-                                })()}
+                                <div>
+                                  <Label className="text-white text-lg mb-2 block">Enter Common Context</Label>
+                                  <textarea
+                                    className="w-full h-32 p-2 bg-gray-800 text-white border border-gray-700 rounded-md"
+                                    placeholder="Enter context..."
+                                    value={contextText}
+                                    onChange={(e) => setContextText(e.target.value)}
+                                  />
+                                </div>
+
+                                <div>
+                                  <Label className="text-white text-lg mb-2 block">Enter Responses (one per line)</Label>
+                                  <textarea
+                                    className="w-full h-32 p-2 bg-gray-800 text-white border border-gray-700 rounded-md"
+                                    placeholder="Enter responses, one per line..."
+                                    value={responseText}
+                                    onChange={(e) => setResponseText(e.target.value)}
+                                  />
+                                </div>
+
+                                <div className="text-sm text-gray-400">
+                                  - OR -
+                                </div>
+
+                                <div>
+                                  <Label className="text-white text-lg mb-2 block">Upload Test Data File</Label>
+                                  <div
+                                    className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-gray-600 transition-colors"
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={(e) => {
+                                      e.preventDefault();
+                                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                                        handleFileChange({ target: { files: e.dataTransfer.files } } as React.ChangeEvent<HTMLInputElement>);
+                                      }
+                                    }}
+                                  >
+                                    <Input
+                                      type="file"
+                                      className="hidden"
+                                      onChange={handleFileChange}
+                                      accept=".json,.csv"
+                                      id="file-upload"
+                                    />
+                                    <Label htmlFor="file-upload" className="cursor-pointer">
+                                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                                      <p className="mt-2 text-sm text-white">
+                                        Drag and drop file here or click to upload
+                                      </p>
+                                      <p className="mt-1 text-xs text-gray-300">
+                                        Limit 200MB per file • JSON, CSV
+                                      </p>
+                                    </Label>
+                                  </div>
+                                </div>
                               </div>
                             )}
 

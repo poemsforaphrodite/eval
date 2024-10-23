@@ -365,17 +365,24 @@ export default function Dashboard() {
                     <CardTitle className="text-purple-400">Your Evaluation Results</CardTitle>
                     <CardDescription className="text-gray-400">Evaluation Scores and Latency per Query</CardDescription>
                   </div>
-                  <Select onValueChange={(value: 'hour' | 'day' | 'week' | 'month') => setTimeRange(value)}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select time range" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="hour">Last Hour</SelectItem>
-                      <SelectItem value="day">Last Day</SelectItem>
-                      <SelectItem value="week">Last Week</SelectItem>
-                      <SelectItem value="month">Last Month</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    {['hour', 'day', 'week', 'month'].map((range) => (
+                      <Button
+                        key={range}
+                        variant={timeRange === range ? "default" : "secondary"}
+                        className={`
+                          ${timeRange === range 
+                            ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                            : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                          }
+                          transition-colors
+                        `}
+                        onClick={() => setTimeRange(range as 'hour' | 'day' | 'week' | 'month')}
+                      >
+                        Last {range.charAt(0).toUpperCase() + range.slice(1)}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
