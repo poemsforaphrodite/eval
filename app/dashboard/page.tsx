@@ -59,9 +59,11 @@ interface SummaryData {
 }
 
 // Add this helper function at the top of your file, outside of the component
-const truncateText = (text: string, maxLength: number = 50) => {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + '...';
+const truncateText = (text: any, maxLength: number = 50) => {
+  if (!text) return '';
+  const str = String(text);
+  if (str.length <= maxLength) return str;
+  return str.slice(0, maxLength) + '...';
 };
 
 export default function Dashboard() {
