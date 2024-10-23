@@ -20,10 +20,8 @@ const EvalAILibraryGuide = () => {
 
     return (
         <div className="min-h-screen bg-gray-950 text-gray-100 flex">
-            {/* Sidebar */}
             <Sidebar onLogout={handleLogout} />
 
-            {/* Main content */}
             <div className="flex-1 flex flex-col min-h-screen">
                 <header className="bg-gray-900 shadow-lg">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -39,17 +37,22 @@ const EvalAILibraryGuide = () => {
                     >
                         <Card className="mb-8 bg-gray-900 border-gray-800">
                             <CardHeader>
-                                <CardTitle className="text-purple-400">How to Use EvalAI Library</CardTitle>
-                                <CardDescription className="text-gray-400">A comprehensive guide to using the EvalAI library for AI model evaluation.</CardDescription>
+                                <CardTitle className="text-purple-400">Getting Started with EvalAI</CardTitle>
+                                <CardDescription className="text-gray-400">Follow these steps to set up and use the EvalAI library for AI model evaluation.</CardDescription>
                             </CardHeader>
-                            <CardContent className="text-gray-300">
-                                <h2 className="text-xl font-semibold text-purple-400 mt-4 mb-2">1. Installation</h2>
-                                <p>To install the EvalAI library, run the following command:</p>
-                                <pre className="bg-gray-800 p-2 rounded-md mt-2"><code>pip install evalaii==0.2.0</code></pre>
+                            <CardContent className="text-gray-300 space-y-6">
+                                {/* Installation Section */}
+                                <div>
+                                    <h2 className="text-xl font-semibold text-purple-400 mb-3">1. Installation</h2>
+                                    <p className="mb-2">First, install the EvalAI library using pip:</p>
+                                    <pre className="bg-gray-800 p-4 rounded-md font-mono text-sm"><code>!pip install evalaii==0.3.0</code></pre>
+                                </div>
 
-                                <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">2. Initialization and Authentication</h2>
-                                <p>Initialize the EvalAI client and authenticate using your API key:</p>
-                                <pre className="bg-gray-800 p-2 rounded-md mt-2"><code>{`
+                                {/* Usage Section */}
+                                <div>
+                                    <h2 className="text-xl font-semibold text-purple-400 mb-3">2. Basic Usage</h2>
+                                    <p className="mb-2">Here's how to initialize and use the EvalAI library:</p>
+                                    <pre className="bg-gray-800 p-4 rounded-md font-mono text-sm overflow-x-auto"><code>{`
 from evalai.api import EvalAI
 
 eval_ai = EvalAI()
@@ -61,64 +64,31 @@ if user:
     eval_ai._initialize_clients(user)
 else:
     print("Error: Invalid API key")
-    `}</code></pre>
 
-                                <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">3. Basic Usage</h2>
-                                <p>Here are some basic operations you can perform with the EvalAI library:</p>
-                                <pre className="bg-gray-800 p-2 rounded-md mt-2"><code>{`
-# Get user information
-user = eval_ai.get_user_by_api_key(api_key)
-print(f"User: {user}")
+print(f"User: {user}\\n")
+# Test get_models
+models_result = eval_ai.get_models(api_key)
+print(f"Models: {models_result}\\n")
 
-# Get available models
-models = eval_ai.get_models(api_key)
-print(f"Models: {models}")
+add_context_result = await eval_ai.add_context(api_key, "gpt-4o-mini", "./custom_context.txt")
+print(f"Add Context Result: {add_context_result}\\n")
 
-# Add a new model (example with custom model)
-new_model = eval_ai.add_model(
-    api_key,
-    "model_name",
-    "custom",
-    "your_model_key_here"
-)
-print(f"Add Model Result: {new_model}")
-    `}</code></pre>
+result = await eval_ai.process_prompts_file(api_key, "gpt-4o-mini", "./prompts.json")
+print(f"Process Prompts Result: {result}\\n")
+if result["success"]:
+    print(f"Results saved to: {result['output_file']}\\n")
+`}</code></pre>
+                                </div>
 
-                                <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">4. Working with Models</h2>
-                                <p>Interact with models and evaluate responses:</p>
-                                <pre className="bg-gray-800 p-2 rounded-md mt-2"><code>{`
-# Add context to a model
-context_result = eval_ai.add_context(api_key, "model_name", "path/to/context_file.txt")
-print(f"Add Context Result: {context_result}")
-
-# Get context for a prompt
-context = eval_ai.get_context(api_key, "model_name", "Your prompt here")
-print(f"Get Context Result: {context}")
-
-# Evaluate a model's response
-evaluation = eval_ai.evaluate(api_key, "model_name", "Your prompt here")
-print(f"Evaluate Result: {evaluation}")
-    `}</code></pre>
-
-                                <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">5. Batch Processing</h2>
-                                <p>Process multiple prompts from a file:</p>
-                                <pre className="bg-gray-800 p-2 rounded-md mt-2"><code>{`
-result = eval_ai.process_prompts_file(api_key, "model_name", "path/to/prompts.json")
-print(f"Process Prompts Result: {result}")
-    `}</code></pre>
-
-                                <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">6. Error Handling</h2>
-                                <p>Always wrap your API calls in try-except blocks to handle potential errors:</p>
-                                <pre className="bg-gray-800 p-2 rounded-md mt-2"><code>{`
-try:
-    result = eval_ai.evaluate(api_key, "model_name", "Your prompt here")
-    print(result)
-except Exception as e:
-    print(f"An error occurred: {e}")
-    `}</code></pre>
-
-                                <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">7. Further Resources</h2>
-                                <p>For more detailed information, please refer to the official EvalAI documentation.</p>
+                                {/* Notes Section */}
+                                <div className="mt-4">
+                                    <h2 className="text-xl font-semibold text-purple-400 mb-3">Important Notes</h2>
+                                    <ul className="list-disc list-inside space-y-2 text-gray-300">
+                                        <li>Make sure to replace the API key with your own</li>
+                                        <li>Custom context files should be in plain text format</li>
+                                        <li>Prompt files should be in JSON format</li>
+                                    </ul>
+                                </div>
                             </CardContent>
                         </Card>
                     </motion.div>
