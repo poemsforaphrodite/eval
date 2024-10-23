@@ -4,14 +4,10 @@ import bcrypt from 'bcrypt';
 import { generateApiKey } from '@/lib/mongodb';
 
 export async function POST(request: Request) {
-  const { username, password, isAdmin, openai_api_key } = await request.json();
+  const { username, password, isAdmin } = await request.json();
 
   if (!username || !password || typeof password !== 'string') {
     return NextResponse.json({ error: 'Invalid username or password' }, { status: 400 });
-  }
-
-  if (!openai_api_key) {
-    return NextResponse.json({ error: 'OpenAI API key is required' }, { status: 400 });
   }
 
   const client = await clientPromise;
@@ -27,14 +23,14 @@ export async function POST(request: Request) {
   // Generate API key
   const apiKey = generateApiKey();
 
-  // Hash password and create new user with API key, isAdmin flag, and OpenAI API key
+  // Hash password and create new user with API key and isAdmin flag
   const hashedPassword = await bcrypt.hash(password, 10);
   await users.insertOne({ 
     username, 
     password: hashedPassword, 
     apiKey, 
     isAdmin: !!isAdmin,
-    openai_api_key 
+    openai_api_key: null  // Initialize as null
   });
 
   return NextResponse.json({ message: 'User created successfully', apiKey }, { status: 201 });

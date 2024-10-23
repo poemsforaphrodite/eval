@@ -17,7 +17,6 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState('');
-  const [openai_api_key, setOpenaiApiKey] = useState('');
   const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -33,7 +32,7 @@ export default function SignupPage() {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, isAdmin, openai_api_key }),
+        body: JSON.stringify({ username, password, isAdmin }),
       });
 
       const data = await response.json();
@@ -86,15 +85,6 @@ export default function SignupPage() {
                   placeholder="Confirm Password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-gray-800 text-gray-100 border-gray-700 focus:border-purple-400"
-                />
-              </div>
-              <div>
-                <Input
-                  type="password"
-                  placeholder="OpenAI API Key"
-                  value={openai_api_key}
-                  onChange={(e) => setOpenaiApiKey(e.target.value)}
                   className="w-full bg-gray-800 text-gray-100 border-gray-700 focus:border-purple-400"
                 />
               </div>

@@ -84,6 +84,11 @@ export default function Sidebar({ onLogout }: SidebarProps) {
             <Users className="w-5 h-5 mr-2" /> Users
           </Button>
         </Link>
+        <Link href="/settings" className="block">
+          <Button variant="outline" className="w-full justify-start text-gray-300 hover:text-purple-400 bg-gray-800 hover:bg-gray-700 border-gray-700 hover:border-purple-400 py-4 text-base transition-colors duration-200">
+            <Settings className="w-5 h-5 mr-2" /> Settings
+          </Button>
+        </Link>
         <Link href="/ab-testing" className="block">
           <Button variant="outline" className="w-full justify-start text-gray-300 bg-gray-800 border-gray-700 py-4 text-base cursor-default">
             <SplitSquareVertical className="w-5 h-5 mr-2" /> A/B Testing
