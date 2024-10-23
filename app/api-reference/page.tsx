@@ -45,7 +45,7 @@ const EvalAILibraryGuide = () => {
                             <CardContent className="text-gray-300">
                                 <h2 className="text-xl font-semibold text-purple-400 mt-4 mb-2">1. Installation</h2>
                                 <p>To install the EvalAI library, run the following command:</p>
-                                <pre className="bg-gray-800 p-2 rounded-md mt-2"><code>pip install evalaii==0.1.0</code></pre>
+                                <pre className="bg-gray-800 p-2 rounded-md mt-2"><code>pip install evalaii==0.2.0</code></pre>
 
                                 <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">2. Initialization and Authentication</h2>
                                 <p>Initialize the EvalAI client and authenticate using your API key:</p>
@@ -54,6 +54,13 @@ from evalai.api import EvalAI
 
 eval_ai = EvalAI()
 api_key = "your_api_key_here"
+
+# Verify API key and initialize clients
+user = eval_ai.get_user_by_api_key(api_key)
+if user:
+    eval_ai._initialize_clients(user)
+else:
+    print("Error: Invalid API key")
     `}</code></pre>
 
                                 <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">3. Basic Usage</h2>
@@ -67,63 +74,50 @@ print(f"User: {user}")
 models = eval_ai.get_models(api_key)
 print(f"Models: {models}")
 
-# Add a new model
-new_model = eval_ai.add_model(api_key, "model_name", "model_type", "model_key")
+# Add a new model (example with custom model)
+new_model = eval_ai.add_model(
+    api_key,
+    "model_name",
+    "custom",
+    "your_model_key_here"
+)
 print(f"Add Model Result: {new_model}")
     `}</code></pre>
 
                                 <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">4. Working with Models</h2>
                                 <p>Interact with models and evaluate responses:</p>
                                 <pre className="bg-gray-800 p-2 rounded-md mt-2"><code>{`
-# Get a model response
-response = await eval_ai.model_response(api_key, "model_name", "Your prompt here")
-print(f"Model Response: {response}")
-
 # Add context to a model
-context_result = await eval_ai.add_context(api_key, "model_name", "path/to/context_file.txt")
+context_result = eval_ai.add_context(api_key, "model_name", "path/to/context_file.txt")
 print(f"Add Context Result: {context_result}")
 
 # Get context for a prompt
-context = await eval_ai.get_context(api_key, "model_name", "Your prompt here")
+context = eval_ai.get_context(api_key, "model_name", "Your prompt here")
 print(f"Get Context Result: {context}")
 
 # Evaluate a model's response
-evaluation = await eval_ai.evaluate(api_key, "model_name", "Your prompt here")
+evaluation = eval_ai.evaluate(api_key, "model_name", "Your prompt here")
 print(f"Evaluate Result: {evaluation}")
     `}</code></pre>
 
                                 <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">5. Batch Processing</h2>
                                 <p>Process multiple prompts from a file:</p>
                                 <pre className="bg-gray-800 p-2 rounded-md mt-2"><code>{`
-result = await eval_ai.process_prompts_file(api_key, "model_name", "path/to/prompts.json")
+result = eval_ai.process_prompts_file(api_key, "model_name", "path/to/prompts.json")
 print(f"Process Prompts Result: {result}")
     `}</code></pre>
 
-                                <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">6. Asynchronous Operations</h2>
-                                <p>The EvalAI library supports asynchronous operations. Use it with asyncio:</p>
-                                <pre className="bg-gray-800 p-2 rounded-md mt-2"><code>{`
-import asyncio
-
-async def main():
-    # Your EvalAI operations here
-    # ...
-    await eval_ai.close()  # Don't forget to close the session
-
-if __name__ == "__main__":
-    asyncio.run(main())
-    `}</code></pre>
-
-                                <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">7. Error Handling</h2>
+                                <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">6. Error Handling</h2>
                                 <p>Always wrap your API calls in try-except blocks to handle potential errors:</p>
                                 <pre className="bg-gray-800 p-2 rounded-md mt-2"><code>{`
 try:
-    result = await eval_ai.evaluate(api_key, "model_name", "Your prompt here")
+    result = eval_ai.evaluate(api_key, "model_name", "Your prompt here")
     print(result)
 except Exception as e:
     print(f"An error occurred: {e}")
     `}</code></pre>
 
-                                <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">8. Further Resources</h2>
+                                <h2 className="text-xl font-semibold text-purple-400 mt-6 mb-2">7. Further Resources</h2>
                                 <p>For more detailed information, please refer to the official EvalAI documentation.</p>
                             </CardContent>
                         </Card>
