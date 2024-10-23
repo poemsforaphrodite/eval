@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { connectToDatabase } from '../../../lib/mongodb';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Add function to get user's OpenAI API key
+async function getUserOpenAIKey(username: string) {
+  const db = await connectToDatabase();
+  const user = await db.collection('users').findOne({ username });
+  return user?.openai_api_key;
+}
 
-// Add these new configuration exports
+// Remove the global OpenAI client initialization
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -35,8 +37,9 @@ interface ImageEvaluationResult {
   evaluatedAt: Date;
 }
 
-async function summarizeImage(base64Image: string): Promise<string> {
+async function summarizeImage(base64Image: string, openaiApiKey: string): Promise<string> {
   try {
+    const openai = new OpenAI({ apiKey: openaiApiKey });
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -62,8 +65,9 @@ async function summarizeImage(base64Image: string): Promise<string> {
   }
 }
 
-async function evaluateImageResponse(prompt: string, context: string, response: string): Promise<{ [key: string]: FactorEvaluation } | null> {
+async function evaluateImageResponse(prompt: string, context: string, response: string, openaiApiKey: string): Promise<{ [key: string]: FactorEvaluation } | null> {
   try {
+    const openai = new OpenAI({ apiKey: openaiApiKey });
     const evaluationPrompt = `
 Evaluate the following image-based response based on the given prompt and context. 
 Rate each factor on a scale of 0 to 1, where 1 is the best (or least problematic for negative factors like Hallucination and Bias).
@@ -130,6 +134,15 @@ export async function POST(req: NextRequest) {
     const username = formData.get('username') as string;
     const modelName = formData.get('modelName') as string;
     
+    // Get user's OpenAI API key
+    const openaiApiKey = await getUserOpenAIKey(username);
+    if (!openaiApiKey) {
+      return NextResponse.json(
+        { error: 'OpenAI API key not found for user.' },
+        { status: 400 }
+      );
+    }
+
     const promptType = formData.get('promptType') as string;
     const contextType = formData.get('contextType') as string;
     const responseType = formData.get('responseType') as string;
@@ -155,7 +168,7 @@ export async function POST(req: NextRequest) {
     if (promptType === 'image' && promptImage) {
       const buffer = await promptImage.arrayBuffer();
       const base64Image = Buffer.from(buffer).toString('base64');
-      prompt = await summarizeImage(base64Image);
+      prompt = await summarizeImage(base64Image, openaiApiKey);
     } else if (promptType === 'text' && promptText) {
       prompt = promptText;
     } else {
@@ -169,7 +182,7 @@ export async function POST(req: NextRequest) {
     if (contextType === 'image' && contextImage) {
       const buffer = await contextImage.arrayBuffer();
       const base64Image = Buffer.from(buffer).toString('base64');
-      context = await summarizeImage(base64Image);
+      context = await summarizeImage(base64Image, openaiApiKey);
     } else if (contextType === 'text' && contextText) {
       context = contextText;
     } else {
@@ -183,7 +196,7 @@ export async function POST(req: NextRequest) {
     if (responseType === 'image' && responseImage) {
       const buffer = await responseImage.arrayBuffer();
       const base64Image = Buffer.from(buffer).toString('base64');
-      response = await summarizeImage(base64Image);
+      response = await summarizeImage(base64Image, openaiApiKey);
     } else if (responseType === 'text' && responseText) {
       response = responseText;
     } else {
@@ -193,8 +206,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Evaluate the response based on the summaries or text
-    const evaluation = await evaluateImageResponse(prompt, context, response);
+    // Evaluate with user's API key
+    const evaluation = await evaluateImageResponse(prompt, context, response, openaiApiKey);
 
     if (!evaluation) {
       return NextResponse.json(

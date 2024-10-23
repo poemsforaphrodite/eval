@@ -8,16 +8,17 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-// Add this new configuration
+// Add function to get user's OpenAI API key
+async function getUserOpenAIKey(username: string) {
+  const db = await connectToDatabase();
+  const user = await db.collection('users').findOne({ username });
+  return user?.openai_api_key;
+}
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
+async function transcribeAudio(audioBuffer: Buffer, openaiApiKey: string): Promise<string> {
   const tempFilePath = path.join(os.tmpdir(), `audio-${Date.now()}.mp3`);
   
   try {
@@ -27,6 +28,7 @@ async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
     // Create a read stream from the temporary file
     const fileStream = fs.createReadStream(tempFilePath);
 
+    const openai = new OpenAI({ apiKey: openaiApiKey });
     const transcription = await openai.audio.transcriptions.create({
       file: fileStream,
       model: "whisper-1",
@@ -39,7 +41,6 @@ async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
       await fs.promises.unlink(tempFilePath);
     } catch (error) {
       console.error('Error deleting temporary file:', error);
-      // Don't throw an error here, as it's not critical to the main operation
     }
   }
 }
@@ -50,6 +51,15 @@ export async function POST(req: NextRequest) {
     const username = formData.get('username') as string;
     const modelName = formData.get('modelName') as string;
     
+    // Get user's OpenAI API key
+    const openaiApiKey = await getUserOpenAIKey(username);
+    if (!openaiApiKey) {
+      return NextResponse.json(
+        { error: 'OpenAI API key not found for user.' },
+        { status: 400 }
+      );
+    }
+
     const promptType = formData.get('promptType') as string;
     const contextType = formData.get('contextType') as string;
     const responseType = formData.get('responseType') as string;
@@ -74,7 +84,7 @@ export async function POST(req: NextRequest) {
     // Handle prompt
     if (promptType === 'audio' && promptAudio) {
       const promptBuffer = Buffer.from(await promptAudio.arrayBuffer());
-      prompt = await transcribeAudio(promptBuffer);
+      prompt = await transcribeAudio(promptBuffer, openaiApiKey);
     } else if (promptType === 'text' && promptText) {
       prompt = promptText;
     } else {
@@ -87,7 +97,7 @@ export async function POST(req: NextRequest) {
     // Handle context
     if (contextType === 'audio' && contextAudio) {
       const contextBuffer = Buffer.from(await contextAudio.arrayBuffer());
-      context = await transcribeAudio(contextBuffer);
+      context = await transcribeAudio(contextBuffer, openaiApiKey);
     } else if (contextType === 'text' && contextText) {
       context = contextText;
     } else {
@@ -100,7 +110,7 @@ export async function POST(req: NextRequest) {
     // Handle response
     if (responseType === 'audio' && responseAudio) {
       const responseBuffer = Buffer.from(await responseAudio.arrayBuffer());
-      response = await transcribeAudio(responseBuffer);
+      response = await transcribeAudio(responseBuffer, openaiApiKey);
     } else if (responseType === 'text' && responseText) {
       response = responseText;
     } else {

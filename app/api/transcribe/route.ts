@@ -3,20 +3,39 @@ import OpenAI from 'openai';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { connectToDatabase } from '../../lib/mongodb';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Add function to get user's OpenAI API key
+async function getUserOpenAIKey(username: string) {
+  const db = await connectToDatabase();
+  const user = await db.collection('users').findOne({ username });
+  return user?.openai_api_key;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get('file') as File;
     const type = formData.get('type') as string;
+    const username = formData.get('username') as string;
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
+
+    // Get user's OpenAI API key
+    const openaiApiKey = await getUserOpenAIKey(username);
+    if (!openaiApiKey) {
+      return NextResponse.json(
+        { error: 'OpenAI API key not found for user.' },
+        { status: 400 }
+      );
+    }
+
+    // Initialize OpenAI with user's API key
+    const openai = new OpenAI({
+      apiKey: openaiApiKey,
+    });
 
     // Create a temporary file
     const tempDir = os.tmpdir();

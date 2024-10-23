@@ -5,18 +5,26 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { connectToDatabase } from '../../../lib/mongodb';
 import { Pinecone } from '@pinecone-database/pinecone';
 
-const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Add function to get user's OpenAI API key
+async function getUserOpenAIKey(username: string) {
+  const db = await connectToDatabase();
+  const user = await db.collection('users').findOne({ username });
+  return user?.openai_api_key;
+}
 
-async function getEmbedding(text: string | undefined): Promise<number[]> {
+// Remove the global OpenAI client
+const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
+
+async function getEmbedding(text: string | undefined, openaiApiKey: string): Promise<number[]> {
   if (typeof text !== 'string') {
     console.error('Invalid input for getEmbedding:', text);
     throw new Error('Invalid input for getEmbedding: text must be a string');
   }
 
+  const openai = new OpenAI({ apiKey: openaiApiKey });
   const response = await openai.embeddings.create({
     model: "text-embedding-ada-002",
-    input: text.replace(/\n/g, " "), // Replace newlines with spaces
+    input: text.replace(/\n/g, " "),
   });
   return response.data[0].embedding;
 }
@@ -50,7 +58,7 @@ async function upsertToPinecone(chunks: string[], modelId: string) {
   const namespace = modelId; // Use modelId directly as the namespace
 
   const vectors = await Promise.all(chunks.map(async (chunk, i) => {
-    const embedding = await getEmbedding(chunk);
+    const embedding = await getEmbedding(chunk, process.env.OPENAI_API_KEY!);
     return {
       id: `chunk_${i}`,
       values: embedding,
@@ -65,7 +73,7 @@ async function upsertToPinecone(chunks: string[], modelId: string) {
 async function queryPinecone(prompt: string, modelId: string): Promise<string> {
   const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
   const namespace = modelId; // Use modelId directly as the namespace
-  const queryEmbedding = await getEmbedding(prompt);
+  const queryEmbedding = await getEmbedding(prompt, process.env.OPENAI_API_KEY!);
 
   const queryResponse = await index.namespace(namespace).query({
     topK: 1,
@@ -77,7 +85,7 @@ async function queryPinecone(prompt: string, modelId: string): Promise<string> {
   return String(queryResponse.matches[0]?.metadata?.text || '');
 }
 
-async function evaluateWithTeacherModel(prompt: string, response: string, context: string): Promise<any> {
+async function evaluateWithTeacherModel(prompt: string, response: string, context: string, openaiApiKey: string): Promise<any> {
   const evaluationPrompt = `
 Evaluate the following response based on the given prompt and context. 
 Rate each factor on a scale of 0 to 1, where 1 is the best (or least problematic for negative factors like Hallucination and Bias).
@@ -102,6 +110,7 @@ Do not include any additional text, explanations, or markdown formatting.
   `;
 
   try {
+    const openai = new OpenAI({ apiKey: openaiApiKey });
     const teacherResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: 'user', content: evaluationPrompt }],
@@ -138,6 +147,15 @@ export async function POST(request: Request) {
   try {
     console.log('Received POST request for custom model evaluation');
     const { modelName, testData, username } = await request.json();
+
+    // Get user's OpenAI API key
+    const openaiApiKey = await getUserOpenAIKey(username);
+    if (!openaiApiKey) {
+      return NextResponse.json(
+        { error: 'OpenAI API key not found for user.' },
+        { status: 400 }
+      );
+    }
 
     if (!modelName || !testData || !username) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -206,7 +224,7 @@ export async function POST(request: Request) {
       switch (modelName) {
         case 'gpt-4o':
         case 'gpt-4o-mini':
-          const customOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+          const customOpenAI = new OpenAI({ apiKey: openaiApiKey });
           const openAIResponse = await customOpenAI.chat.completions.create({
             model: modelName,
             messages: [{ role: 'user', content: fullPrompt }],
@@ -243,7 +261,7 @@ export async function POST(request: Request) {
       // Evaluate with teacher model
       let evaluation;
       try {
-        evaluation = await evaluateWithTeacherModel(promptText, result, relevantContext);
+        evaluation = await evaluateWithTeacherModel(promptText, result, relevantContext, openaiApiKey);
       } catch (error) {
         console.error('Error evaluating with teacher model:', error);
         evaluation = {

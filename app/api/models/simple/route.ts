@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { connectToDatabase } from '../../../lib/mongodb';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Add function to get user's OpenAI API key
+async function getUserOpenAIKey(username: string) {
+  const db = await connectToDatabase();
+  const user = await db.collection('users').findOne({ username });
+  return user?.openai_api_key;
+}
 
 interface EvaluationEntry {
   prompt: string;
@@ -43,9 +45,15 @@ async function evaluateResponse(
   context: string,
   response: string,
   username: string,
-  modelName: string
+  modelName: string,
+  openaiApiKey: string  // Add parameter for OpenAI API key
 ): Promise<EvaluationResult | null> {
   const evaluationStartTime = Date.now(); // Start time for this evaluation
+
+  // Create OpenAI client with user's API key
+  const openai = new OpenAI({
+    apiKey: openaiApiKey,
+  });
 
   try {
     const evaluationPrompt = `
@@ -148,6 +156,15 @@ export async function POST(req: NextRequest) {
   try {
     const { testData, username, modelName } = await req.json();
 
+    // Get user's OpenAI API key
+    const openaiApiKey = await getUserOpenAIKey(username);
+    if (!openaiApiKey) {
+      return NextResponse.json(
+        { error: 'OpenAI API key not found for user.' },
+        { status: 400 }
+      );
+    }
+
     if (!Array.isArray(testData)) {
       console.error('Invalid data format. Expected an array.');
       return NextResponse.json(
@@ -181,7 +198,8 @@ export async function POST(req: NextRequest) {
         };
       }
 
-      const result = await evaluateResponse(prompt, context, response, username, modelName);
+      // Pass OpenAI API key to evaluateResponse
+      const result = await evaluateResponse(prompt, context, response, username, modelName, openaiApiKey);
       return result || {
         username,
         modelName,

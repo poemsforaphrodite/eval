@@ -64,7 +64,8 @@ const truncateText = (text: string, maxLength: number = 50) => {
   return text.slice(0, maxLength) + '...';
 };
 
-export default function Dashboard() {
+// Change the component name from Dashboard to TimeSpan
+export default function TimeSpan() {
   const router = useRouter();
   const [username, setUsername] = useState<string | undefined>('');
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
@@ -84,6 +85,7 @@ export default function Dashboard() {
     averageLatency: 0,
     averageScores: {},
   });
+  const [timeRange, setTimeRange] = useState<'hour' | 'day' | 'week' | 'month'>('day');
   const [apiKey, setApiKey] = useState<string>('');
   const [showApiKey, setShowApiKey] = useState(false);
 
@@ -102,7 +104,7 @@ export default function Dashboard() {
     if (username && selectedModelName) {
       fetchEvaluations(username);
     }
-  }, [username, selectedModelName]);
+  }, [username, selectedModelName, timeRange]);
 
   useEffect(() => {
     const lowScores = evaluations.filter(evaluation => 
@@ -140,7 +142,7 @@ export default function Dashboard() {
         model => `${model.model_name} (${capitalize(model.model_type)})` === selectedModelName
       );
       const modelIdentifier = selectedModel ? selectedModel.model_name : '';
-      const response = await fetch(`/api/evaluations?username=${user}&model_name=${encodeURIComponent(modelIdentifier)}`);
+      const response = await fetch(`/api/evaluations?username=${user}&model_name=${encodeURIComponent(modelIdentifier)}&timeRange=${timeRange}`);
       const data = await response.json();
 
       if (Array.isArray(data.evaluations)) {
@@ -363,6 +365,24 @@ export default function Dashboard() {
                   <div>
                     <CardTitle className="text-purple-400">Your Evaluation Results</CardTitle>
                     <CardDescription className="text-gray-400">Evaluation Scores and Latency per Query</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    {['hour', 'day', 'week', 'month'].map((range) => (
+                      <Button
+                        key={range}
+                        variant={timeRange === range ? "default" : "secondary"}
+                        className={`
+                          ${timeRange === range 
+                            ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                            : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                          }
+                          transition-colors
+                        `}
+                        onClick={() => setTimeRange(range as 'hour' | 'day' | 'week' | 'month')}
+                      >
+                        Last {range.charAt(0).toUpperCase() + range.slice(1)}
+                      </Button>
+                    ))}
                   </div>
                 </div>
               </CardHeader>
