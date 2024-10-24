@@ -195,16 +195,20 @@ export default function PromptTestingPage() {
     reader.readAsText(file);
   };
 
-  // Handlers for uploading Prompt JSON
+  // Handler for uploading Prompt JSON
   const handlePromptJsonUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const reader = new FileReader();
       reader.onload = () => {
         try {
           const promptData = JSON.parse(reader.result as string);
-          setPromptJson(JSON.stringify(promptData));
-          setSuccess('Prompt JSON uploaded successfully!');
-          setErrors([]);
+          if (Array.isArray(promptData) && promptData.every(item => typeof item.prompt === 'string')) {
+            const prompts = promptData.map(item => item.prompt).join('\n');
+            setPromptText(prompts);
+            setSuccess('Prompt JSON uploaded successfully!');
+          } else {
+            setErrors(['Invalid Prompt JSON format. Please check your file.']);
+          }
         } catch {
           setErrors(['Invalid Prompt JSON format. Please check your file.']);
         }
@@ -213,16 +217,18 @@ export default function PromptTestingPage() {
     }
   };
 
-  // Handlers for uploading Context TXT
-  const handleContextTxtUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handler for uploading Context TXT
+  const handleContextTxtUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const reader = new FileReader();
-      reader.onload = async () => {
+      reader.onload = () => {
         const text = reader.result as string;
-        setContextTxt(text);
-        setSuccess('Context TXT uploaded successfully!');
-        setErrors([]);
-        console.log('Context TXT uploaded successfully');
+        if (text.trim()) {
+          setContextText(text);
+          setSuccess('Context TXT uploaded successfully!');
+        } else {
+          setErrors(['Context TXT is empty. Please check your file.']);
+        }
       };
       reader.readAsText(e.target.files[0]);
     }
@@ -245,8 +251,10 @@ export default function PromptTestingPage() {
 
       console.log('Starting test run...');
       let response: AxiosResponse<ApiResponse> | undefined;
-
-      if (inputType === 'text' && modelType === 'simple') {
+      if(modelType === 'custom') {
+        console.log('Running custom model test...');
+        handleCustomModelTest();
+      } else if (inputType === 'text' && modelType === 'simple') {
         // Handle direct text input
         if (file) {
           const fileContent = await readFileContent(file);
@@ -391,6 +399,57 @@ export default function PromptTestingPage() {
       }
     } catch (error: any) {
       console.error('Error running tests:', error.response?.data || error.message);
+      setErrors([`An error occurred while running evaluations: ${error.response?.data?.error || error.message}`]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCustomModelTest = async () => {
+    setErrors([]);
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      if (!selectedModel) {
+        setErrors(['Please select a model for testing.']);
+        setLoading(false);
+        return;
+      }
+
+      // Debugging logs to check input values
+      console.log('Prompt Text:', promptText);
+      console.log('Context Text:', contextText);
+
+      if (!promptText.trim() || !contextText.trim()) {
+        setErrors(['Both prompt and context are required.']);
+        setLoading(false);
+        return;
+      }
+
+      const modelName = selectedModel.split(' (')[0];
+      const prompts = promptText.split('\n').filter(p => p.trim());
+
+      const requestData = {
+        modelName,
+        testData: prompts.map(prompt => ({
+          prompt,
+          context: contextText,
+        })),
+        username,
+      };
+
+      console.log('Sending request to custom model API:', requestData);
+      const response = await axios.post('/api/models/custom', requestData);
+
+      if (response.data && response.data.results) {
+        setAllResults(prevResults => [...prevResults, response.data.results]);
+        setSuccess('Evaluation completed. You can now view the results.');
+      } else {
+        throw new Error('Unexpected response format from server');
+      }
+    } catch (error: any) {
+      console.error('Error running custom model tests:', error.response?.data || error.message);
       setErrors([`An error occurred while running evaluations: ${error.response?.data?.error || error.message}`]);
     } finally {
       setLoading(false);
@@ -763,7 +822,7 @@ export default function PromptTestingPage() {
                               </div>
                             )}
 
-                            <Button onClick={handleRunTest} disabled={loading} className="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white py-2 text-lg font-semibold">
+                            <Button onClick={selectedModel.includes('custom') ? handleCustomModelTest : handleRunTest} disabled={loading} className="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white py-2 text-lg font-semibold">
                               <PlayCircle className="mr-2 h-5 w-5" /> {loading ? 'Running Test...' : 'Run Test'}
                             </Button>
                           </>

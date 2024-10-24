@@ -6,7 +6,7 @@ import { connectToDatabase } from '../../../lib/mongodb';
 import { Pinecone } from '@pinecone-database/pinecone';
 
 // Add function to get user's OpenAI API key
-async function getUserOpenAIKey(username: string) {
+async function getUserOpenAIKey(username: string): Promise<string | undefined> {
   const db = await connectToDatabase();
   const user = await db.collection('users').findOne({ username });
   return user?.openai_api_key;
@@ -52,13 +52,13 @@ function chunkText(text: string, chunkSize: number = 1000): string[] {
   return chunks;
 }
 
-async function upsertToPinecone(chunks: string[], modelId: string) {
+async function upsertToPinecone(chunks: string[], modelId: string, openaiApiKey: string) {
   console.log(`Upserting ${chunks.length} chunks to Pinecone for model ${modelId}`);
   const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
   const namespace = modelId; // Use modelId directly as the namespace
 
   const vectors = await Promise.all(chunks.map(async (chunk, i) => {
-    const embedding = await getEmbedding(chunk, process.env.OPENAI_API_KEY!);
+    const embedding = await getEmbedding(chunk, openaiApiKey); // Use the passed API key
     return {
       id: `chunk_${i}`,
       values: embedding,
@@ -70,10 +70,10 @@ async function upsertToPinecone(chunks: string[], modelId: string) {
   console.log(`Upserted ${vectors.length} vectors to Pinecone`);
 }
 
-async function queryPinecone(prompt: string, modelId: string): Promise<string> {
+async function queryPinecone(prompt: string, modelId: string, openaiApiKey: string): Promise<string> {
   const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
   const namespace = modelId; // Use modelId directly as the namespace
-  const queryEmbedding = await getEmbedding(prompt, process.env.OPENAI_API_KEY!);
+  const queryEmbedding = await getEmbedding(prompt, openaiApiKey); // Use the passed API key
 
   const queryResponse = await index.namespace(namespace).query({
     topK: 1,
@@ -179,7 +179,7 @@ export async function POST(request: Request) {
     // Chunk and upsert context to Pinecone
     console.log('Chunking and upserting context to Pinecone...');
     const contextChunks = chunkText(testData[0].context);
-    await upsertToPinecone(contextChunks, modelId);
+    await upsertToPinecone(contextChunks, modelId, openaiApiKey); // Pass the API key here
     console.log('Context chunked and upserted to Pinecone');
 
     const results = [];
@@ -211,7 +211,7 @@ export async function POST(request: Request) {
       }
 
       console.log(`Processing prompt: ${promptText.substring(0, 50)}...`);
-      const relevantContext = await queryPinecone(promptText, modelId);
+      const relevantContext = await queryPinecone(promptText, modelId, openaiApiKey); // Pass the API key here
       console.log(`Retrieved relevant context: ${relevantContext.substring(0, 50)}...`);
 
       let result: string;

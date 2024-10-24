@@ -109,10 +109,11 @@ export default function PlaygroundPage() {
         });
       }
 
-      if (responseData && responseData.data && responseData.data.results) {
-        setResult(responseData.data.results[0]);
+      if (responseData && responseData.data && responseData.data.result) {
+        setResult(responseData.data.result);
         setSuccess('Evaluation completed. You can now view the results.');
       } else {
+        console.error('Unexpected response structure:', responseData.data);
         setErrors(['Unexpected response from the server.']);
       }
     } catch (error: any) {
@@ -196,7 +197,7 @@ export default function PlaygroundPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="context" className="text-white text-lg mb-2 block">Enter Context (Optional)</Label>
+                      <Label htmlFor="context" className="text-white text-lg mb-2 block">Enter Context</Label>
                       <Textarea
                         id="context"
                         placeholder="Enter context here..."
