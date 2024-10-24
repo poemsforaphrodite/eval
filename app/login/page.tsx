@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { motion } from "framer-motion";
+import { FaUser, FaLock } from 'react-icons/fa';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -41,41 +42,58 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 flex items-center justify-center">
+    <div className="min-h-screen bg-black text-gray-100 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
       >
-        <Card className="w-96 bg-gray-900 border-gray-800">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-purple-400">Login</CardTitle>
-            <CardDescription className="text-gray-400">Enter your credentials to access the dashboard</CardDescription>
+        <Card className="bg-gray-900 border-gray-800 shadow-lg shadow-purple-500/20">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-3xl font-bold text-center text-purple-400">Welcome Back</CardTitle>
+            <CardDescription className="text-gray-400 text-center">Enter your credentials to access the dashboard</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <Input
-                  type="text"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-gray-800 text-gray-100 border-gray-700 focus:border-purple-400"
-                />
+              <div className="space-y-2">
+                <label htmlFor="username" className="text-sm font-medium text-gray-300">Username</label>
+                <div className="relative">
+                  <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="Enter your username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full bg-gray-800 text-gray-100 border-gray-700 focus:border-purple-400 pl-10"
+                  />
+                </div>
               </div>
-              <div>
-                <Input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-gray-800 text-gray-100 border-gray-700 focus:border-purple-400"
-                />
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium text-gray-300">Password</label>
+                <div className="relative">
+                  <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-gray-800 text-gray-100 border-gray-700 focus:border-purple-400 pl-10"
+                  />
+                </div>
               </div>
               {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                </motion.div>
               )}
               <Button
                 type="submit"
@@ -85,13 +103,16 @@ export default function LoginPage() {
               </Button>
             </form>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col space-y-4">
+            <div className="text-sm text-gray-400 text-center">
+              Don't have an account?
+            </div>
             <Link href="/signup" className="w-full">
               <Button
                 variant="outline"
-                className="w-full bg-gray-800 text-purple-400 border-purple-400 hover:bg-purple-400 hover:text-white"
+                className="w-full bg-gray-800 text-purple-400 border-purple-400 hover:bg-purple-400 hover:text-white transition-all duration-200"
               >
-                Go to Signup
+                Sign Up
               </Button>
             </Link>
           </CardFooter>
