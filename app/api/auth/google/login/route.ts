@@ -6,7 +6,7 @@ import { OAuth2Client } from 'google-auth-library';
 const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  'https://eval-lac.vercel.app/api/auth/google/callback' // Make sure this matches your Google Console redirect URI
+  process.env.GOOGLE_REDIRECT_URI  // Updated to use environment variable
 );
 
 export async function POST(req: Request) {
