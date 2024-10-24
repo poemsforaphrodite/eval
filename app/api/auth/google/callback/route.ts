@@ -50,6 +50,8 @@ export async function GET(req: Request) {
       ? 'https://eval-lac.vercel.app/dashboard' 
       : '/dashboard';
 
+    console.log(redirectUrl);
+
     const response = NextResponse.redirect(new URL(redirectUrl, req.url));
     response.cookies.set('username', email, {
       path: '/',
