@@ -190,7 +190,7 @@ export default function ManageModels() {
     }
 
     try {
-      const response = await fetch('/api/delete-model', {
+      const response = await fetch('/api/manage-models/delete-model', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
