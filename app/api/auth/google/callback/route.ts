@@ -35,7 +35,6 @@ export async function GET(req: Request) {
     
     // Check if user exists
     let user = await db.collection('users').findOne({ username: email });
-    
     if (!user) {
       // Create new user
       const apiKey = crypto.randomBytes(32).toString('hex');
@@ -47,7 +46,11 @@ export async function GET(req: Request) {
     }
 
     // Set cookie and redirect directly to dashboard
-    const response = NextResponse.redirect(new URL('/dashboard', req.url));
+    const redirectUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://eval-lac.vercel.app/dashboard' 
+      : '/dashboard';
+
+    const response = NextResponse.redirect(new URL(redirectUrl, req.url));
     response.cookies.set('username', email, {
       path: '/',
       sameSite: 'lax',
