@@ -226,9 +226,15 @@ export default function Dashboard() {
     setSelectedModelName(e.target.value);
   };
 
-  const handleLogout = () => {
-    Cookies.remove('username');
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+      router.push('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   };
 
   const scrollToTable = () => {

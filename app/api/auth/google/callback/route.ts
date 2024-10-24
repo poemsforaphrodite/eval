@@ -6,7 +6,7 @@ import { OAuth2Client } from 'google-auth-library';
 const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI  // Updated to use environment variable
+  process.env.GOOGLE_REDIRECT_URI
 );
 
 // Define the expected structure of userinfo.data
@@ -50,22 +50,17 @@ export async function GET(req: Request) {
       });
     }
 
-    // Set cookie and redirect directly to dashboard
-    const redirectUrl = "/dashboard";
-
-    console.log("redirectUrl", redirectUrl);
-
-    const response = NextResponse.redirect(new URL(redirectUrl, req.url));
-    response.cookies.set('username', email, {
-      path: '/',
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-    });
-
+    // Set cookies and redirect to dashboard
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'; // Ensure this is set in your environment variables
+    const response = NextResponse.redirect(`${baseUrl}/dashboard`);
+    response.cookies.set('username', email, { path: '/' });
     return response;
 
   } catch (error) {
     console.error("Error in Google callback:", error);
-    return NextResponse.redirect(new URL('/login?error=GoogleAuthFailed', req.url));
+    return NextResponse.json(
+      { error: 'Google login failed' },
+      { status: 500 }
+    );
   }
 }

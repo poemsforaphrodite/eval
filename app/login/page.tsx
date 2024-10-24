@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FaUser, FaLock } from 'react-icons/fa';
+import Cookies from 'js-cookie';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { motion } from "framer-motion";
-import Cookies from 'js-cookie';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -31,10 +30,8 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // Set cookie and redirect to dashboard
         Cookies.set('username', username);
         router.push('/dashboard');
-        router.refresh();
       } else {
         setError(data.error || 'Login failed');
       }
@@ -47,118 +44,98 @@ export default function LoginPage() {
     try {
       const response = await fetch('/api/auth/google/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       });
-
       const data = await response.json();
-
-      if (response.ok && data.url) {
-        // Redirect to Google OAuth
-        window.location.href = data.url;
-      } else {
-        setError('Failed to initiate Google login');
+      if (data.url) {
+        window.location.href = data.url; // Redirect to Google OAuth URL
       }
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('An error occurred during Google login.');
+    } catch (error) {
+      setError('Google login failed. Please try again.');
     }
   };
 
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+
+    if (code) {
+      // Exchange code for tokens and handle redirect
+      (async () => {
+        try {
+          const response = await fetch(`/api/auth/google/callback?code=${code}`);
+          if (response.ok) {
+            router.push('/dashboard'); // Redirect handled by server
+          } else {
+            setError('Google login failed. Please try again.');
+          }
+        } catch (error) {
+          setError('An error occurred. Please try again.');
+        }
+      })();
+    }
+  }, [router]);
+
   return (
-    <div className="min-h-screen bg-black text-gray-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-950 text-gray-100 flex items-center justify-center">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
       >
-        <Card className="bg-gray-900 border-gray-800 shadow-lg shadow-purple-500/20">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-3xl font-bold text-center text-purple-400">Welcome Back</CardTitle>
-            <CardDescription className="text-gray-400 text-center">Enter your credentials to access the dashboard</CardDescription>
+        <Card className="w-96 bg-gray-900 border-gray-800">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-purple-400">Login</CardTitle>
+            <CardDescription className="text-gray-400">Enter your credentials to access the dashboard</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleGoogleLogin}
-              className="w-full bg-gray-800 text-gray-200 border border-gray-700 hover:bg-gray-700 flex items-center justify-center space-x-2 h-11"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                {/* Google icon paths */}
-              </svg>
-              <span>Continue with Google</span>
-            </Button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-700"></div>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-gray-900 px-2 text-gray-400">Or continue with</span>
-              </div>
-            </div>
-
+          <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="username" className="text-sm font-medium text-gray-300">Username</label>
-                <div className="relative">
-                  <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-                  <Input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="pl-10 bg-gray-800 border-gray-700 text-gray-100"
-                    placeholder="Enter your username"
-                  />
-                </div>
+              <div>
+                <Input
+                  type="text"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-gray-800 text-gray-100 border-gray-700 focus:border-purple-400"
+                />
               </div>
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-gray-300">Password</label>
-                <div className="relative">
-                  <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 bg-gray-800 border-gray-700 text-gray-100"
-                    placeholder="Enter your password"
-                  />
-                </div>
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-gray-800 text-gray-100 border-gray-700 focus:border-purple-400"
+                />
               </div>
-              <Button type="submit" className="w-full bg-purple-500 hover:bg-purple-600 text-white">
-                Sign In
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <Button
+                type="submit"
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition-colors duration-200"
+              >
+                Log In
+              </Button>
+              <Button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors duration-200"
+              >
+                Log In with Google
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="text-sm text-gray-400 text-center">
-              Don't have an account?
-            </div>
+          <CardFooter>
             <Link href="/signup" className="w-full">
               <Button
                 variant="outline"
-                className="w-full bg-gray-800 text-purple-400 border-purple-400 hover:bg-purple-400 hover:text-white transition-all duration-200"
+                className="w-full bg-gray-800 text-purple-400 border-purple-400 hover:bg-purple-400 hover:text-white"
               >
-                Sign Up
+                Go to Signup
               </Button>
             </Link>
-            <p className="text-xs text-gray-500 text-center mt-2">
-              By signing up, you agree to our{' '}
-              <Link href="/terms" className="text-purple-400 hover:underline">Terms of Use</Link>{' '}
-              and{' '}
-              <Link href="/privacy-policy" className="text-purple-400 hover:underline">Privacy Policy</Link>
-            </p>
           </CardFooter>
         </Card>
       </motion.div>
