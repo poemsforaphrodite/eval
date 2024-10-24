@@ -244,7 +244,7 @@ export default function PromptTestingPage() {
       const modelType = selectedModel.split(' (')[1].replace(')', '').toLowerCase();
 
       console.log('Starting test run...');
-      let response;
+      let response: AxiosResponse<ApiResponse> | undefined;
 
       if (inputType === 'text' && modelType === 'simple') {
         // Handle direct text input
@@ -377,13 +377,17 @@ export default function PromptTestingPage() {
         });
       }
 
-      console.log('Received response from API:', response.data);
+      if (response) {
+        console.log('Received response from API:', response.data);
 
-      if (response.data && response.data.success && response.data.result) {
-        setAllResults(prevResults => [...prevResults, [response.data.result]]);
-        setSuccess('Evaluation completed. You can now view the results.');
+        if (response.data && response.data.success && response.data.result) {
+          setAllResults(prevResults => [...prevResults, [response.data.result]]);
+          setSuccess('Evaluation completed. You can now view the results.');
+        } else {
+          throw new Error('Unexpected response format from server');
+        }
       } else {
-        throw new Error('Unexpected response format from server');
+        setErrors(['No response received from the API.']);
       }
     } catch (error: any) {
       console.error('Error running tests:', error.response?.data || error.message);
@@ -409,9 +413,9 @@ export default function PromptTestingPage() {
     const headers = rows[0].split(',').map(header => header.trim());
 
     const data = [];
-    let currentRow = { prompt: '', context: '', response: '' };
+    let currentRow: { prompt: string; context: string; response: string } = { prompt: '', context: '', response: '' };
     let inQuotes = false;
-    let currentField = 'prompt';
+    let currentField: keyof typeof currentRow = 'prompt'; // Define currentField as a union of the keys
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];

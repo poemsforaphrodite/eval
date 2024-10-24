@@ -9,6 +9,11 @@ const client = new OAuth2Client(
   process.env.GOOGLE_REDIRECT_URI  // Updated to use environment variable
 );
 
+// Define the expected structure of userinfo.data
+interface UserInfo {
+  email: string;
+}
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -23,7 +28,7 @@ export async function GET(req: Request) {
     client.setCredentials(tokens);
 
     // Get user info
-    const userinfo = await client.request({
+    const userinfo = await client.request<UserInfo>({
       url: 'https://www.googleapis.com/oauth2/v2/userinfo',
     });
 
@@ -46,9 +51,7 @@ export async function GET(req: Request) {
     }
 
     // Set cookie and redirect directly to dashboard
-    const redirectUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://eval-lac.vercel.app/dashboard' 
-      : '/dashboard';
+    const redirectUrl = "/dashboard";
 
     console.log("redirectUrl", redirectUrl);
 
@@ -56,6 +59,7 @@ export async function GET(req: Request) {
     response.cookies.set('username', email, {
       path: '/',
       sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
     });
 
     return response;

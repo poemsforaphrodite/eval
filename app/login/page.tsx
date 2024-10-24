@@ -157,7 +157,7 @@ export default function LoginPage() {
               By signing up, you agree to our{' '}
               <Link href="/terms" className="text-purple-400 hover:underline">Terms of Use</Link>{' '}
               and{' '}
-              <Link href="/privacy" className="text-purple-400 hover:underline">Privacy Policy</Link>
+              <Link href="/privacy-policy" className="text-purple-400 hover:underline">Privacy Policy</Link>
             </p>
           </CardFooter>
         </Card>
