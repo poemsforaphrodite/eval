@@ -81,6 +81,9 @@ export default function AdminUsersPage() {
   const [models, setModels] = useState<Model[]>([]);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const router = useRouter();
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newIsAdmin, setNewIsAdmin] = useState(false);
 
   useEffect(() => {
     const storedUsername = Cookies.get('username');
@@ -126,7 +129,7 @@ export default function AdminUsersPage() {
   const handleDeleteUser = async (userId: string) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
-        const response = await fetch(`/api/admin/users/${userId}`, {
+        const response = await fetch(`/api/admin/users/remove?userId=${encodeURIComponent(userId)}`, {
           method: 'DELETE',
         });
         if (!response.ok) {
@@ -176,6 +179,33 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleAddUser = async (username: string, password: string, isAdmin: boolean) => {
+    try {
+      const response = await fetch('/api/admin/users/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, isAdmin }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add user');
+      }
+
+      fetchUsers(); // Refresh the user list
+    } catch (err) {
+      setError('Failed to add user. Please try again.');
+    }
+  };
+
+  const handleAddUserSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleAddUser(newUsername, newPassword, newIsAdmin);
+    setNewUsername('');
+    setNewPassword('');
+    setNewIsAdmin(false);
+  };
+
   if (loading) return <div className="text-center mt-8 text-gray-300">Loading...</div>;
   if (error) return <div className="text-center mt-8 text-red-500">{error}</div>;
 
@@ -196,6 +226,42 @@ export default function AdminUsersPage() {
             transition={{ duration: 0.5 }}
             className="space-y-6"
           >
+            <Card className="bg-gray-900 border-gray-800 shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold text-purple-400">Add New User</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleAddUserSubmit} className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="Username"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-800 text-gray-200"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-800 text-gray-200"
+                  />
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={newIsAdmin}
+                      onChange={(e) => setNewIsAdmin(e.target.checked)}
+                      className="mr-2"
+                    />
+                    <label className="text-gray-200">Admin</label>
+                  </div>
+                  <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
+                    Add User
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
             <Card className="bg-gray-900 border-gray-800 shadow-xl">
               <CardHeader>
                 <CardTitle className="text-2xl font-bold text-purple-400">Users</CardTitle>
@@ -224,6 +290,14 @@ export default function AdminUsersPage() {
                               className="bg-purple-600 hover:bg-purple-700 text-white"
                             >
                               View Models
+                            </Button>
+                            <Button
+                              onClick={() => handleDeleteUser(user._id)}
+                              variant="outline"
+                              size="sm"
+                              className="bg-red-600 hover:bg-red-700 text-white ml-2"
+                            >
+                              Delete
                             </Button>
                           </TableCell>
                         </TableRow>
