@@ -225,8 +225,13 @@ export default function AdminUsersPage() {
         throw new Error('Failed to delete user');
       }
 
-      // Remove the deleted user from the state
-      setUsers(users.filter(user => user._id !== userId));
+      // Fetch updated users list from database
+      const usersResponse = await fetch('/api/admin/users');
+      if (!usersResponse.ok) {
+        throw new Error('Failed to fetch updated users');
+      }
+      const data = await usersResponse.json();
+      setUsers(data.users);
     } catch (err) {
       console.error('Error deleting user:', err);
       setError('Failed to delete user. Please try again.');
