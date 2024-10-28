@@ -93,16 +93,47 @@ export default function AdminUsersPage() {
     } else {
       router.push('/login');
     }
+  }, [router]);
 
-    // Set up periodic refresh with exponential backoff if database isn't ready
-    const refreshInterval = setInterval(() => {
-      if (isAdmin) {
-        fetchUsers();
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    let eventSource: EventSource;
+
+    const connectToStream = () => {
+      eventSource = new EventSource('/api/admin/users/stream');
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.users) {
+            setUsers(data.users);
+            setLoading(false);
+            setIsDatabaseReady(true);
+          }
+        } catch (error) {
+          console.error('Error parsing SSE data:', error);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('SSE error:', error);
+        eventSource.close();
+        setError('Connection lost. Reconnecting...');
+        // Attempt to reconnect after a delay
+        setTimeout(connectToStream, 5000);
+      };
+    };
+
+    connectToStream();
+
+    // Cleanup function
+    return () => {
+      if (eventSource) {
+        eventSource.close();
       }
-    }, isDatabaseReady ? 5000 : 1000); // Shorter interval if database isn't ready
-
-    return () => clearInterval(refreshInterval);
-  }, [router, isAdmin, isDatabaseReady]); // Add isDatabaseReady to dependencies
+    };
+  }, [isAdmin]);
 
   const checkAdminStatus = async (username: string) => {
     try {
@@ -166,19 +197,12 @@ export default function AdminUsersPage() {
       try {
         const response = await fetch(`/api/admin/users/remove?userId=${encodeURIComponent(userId)}`, {
           method: 'DELETE',
-          cache: 'no-store',
-          headers: {
-            'Pragma': 'no-cache',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-          },
         });
         
         if (!response.ok) {
           throw new Error('Failed to delete user');
         }
-        
-        // Fetch updated user list after deletion
-        await fetchUsers();
+        // No need to manually fetch users - the SSE will handle the update
       } catch (err) {
         setError('Failed to delete user. Please try again.');
       }
