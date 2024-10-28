@@ -9,7 +9,13 @@ export async function GET() {
       .project({ username: 1, isAdmin: 1 })
       .toArray();
 
-    return NextResponse.json({ users }, { status: 200 });
+    // Convert _id to string for serialization
+    const usersWithId = users.map((user: any) => ({
+      ...user,
+      _id: user._id.toString(),
+    }));
+
+    return NextResponse.json({ users: usersWithId }, { status: 200 });
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(
@@ -18,4 +24,3 @@ export async function GET() {
     );
   }
 }
-

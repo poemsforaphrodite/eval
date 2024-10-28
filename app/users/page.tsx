@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -86,39 +86,40 @@ export default function AdminUsersPage() {
   const [newIsAdmin, setNewIsAdmin] = useState(false);
   const [isDatabaseReady, setIsDatabaseReady] = useState(false);
 
+  // Define fetchUsers using useCallback to ensure it's accessible throughout the component
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const data = await response.json();
+      setUsers(data.users);
+      setLoading(false);
+      setIsDatabaseReady(true);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setError('Failed to fetch users');
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const storedUsername = Cookies.get('username');
-    console.log('Stored username:', storedUsername); // Add this debug log
-    
+    console.log('Stored username:', storedUsername); // Debug log
+
     if (storedUsername) {
       checkAdminStatus(storedUsername);
     } else {
       router.push('/login');
     }
-  }, []);
+  }, [router, fetchUsers]);
 
   useEffect(() => {
     if (!isAdmin) return;
 
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch('/api/admin/users');
-        if (!response.ok) {
-          throw new Error('Failed to fetch users');
-        }
-        const data = await response.json();
-        setUsers(data.users);
-        setLoading(false);
-        setIsDatabaseReady(true);
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        setError('Failed to fetch users');
-        setLoading(false);
-      }
-    };
-
     fetchUsers();
-  }, [isAdmin]);
+  }, [isAdmin, fetchUsers]);
 
   const checkAdminStatus = async (username: string) => {
     try {
@@ -128,24 +129,21 @@ export default function AdminUsersPage() {
       }
       
       const data = await response.json();
-      console.log('Admin check response:', data); // Add this debug log
+      console.log('Admin check response:', data); // Debug log
       
       setIsAdmin(data.isAdmin);
       if (data.isAdmin) {
-        // Move fetchUsers call outside this function since it's already in a useEffect
         setLoading(false);
       } else {
         setError('You do not have permission to view this page.');
         setLoading(false);
       }
     } catch (err) {
-      console.error('Admin check error:', err); // Add this debug log
+      console.error('Admin check error:', err); // Debug log
       setError('Failed to check admin status. Please try again.');
       setLoading(false);
     }
   };
-
-  
 
   const handleLogout = () => {
     Cookies.remove('username');
@@ -197,7 +195,7 @@ export default function AdminUsersPage() {
         throw new Error(data.error || 'Failed to add user');
       }
 
-      fetchUsers(); // Refresh the user list
+      await fetchUsers(); // Refresh the user list
     } catch (err) {
       setError('Failed to add user. Please try again.');
     }
@@ -225,13 +223,7 @@ export default function AdminUsersPage() {
         throw new Error('Failed to delete user');
       }
 
-      // Fetch updated users list from database
-      const usersResponse = await fetch('/api/admin/users');
-      if (!usersResponse.ok) {
-        throw new Error('Failed to fetch updated users');
-      }
-      const data = await usersResponse.json();
-      setUsers(data.users);
+      await fetchUsers(); // Refresh the user list
     } catch (err) {
       console.error('Error deleting user:', err);
       setError('Failed to delete user. Please try again.');
@@ -270,6 +262,7 @@ export default function AdminUsersPage() {
                     value={newUsername}
                     onChange={(e) => setNewUsername(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-800 text-gray-200"
+                    required
                   />
                   <input
                     type="password"
@@ -277,6 +270,7 @@ export default function AdminUsersPage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-800 text-gray-200"
+                    required
                   />
                   <div className="flex items-center">
                     <input
@@ -310,8 +304,8 @@ export default function AdminUsersPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users.map((user, index) => (
-                        <TableRow key={user._id} className={index % 2 === 0 ? 'bg-gray-900' : 'bg-gray-850'}>
+                      {users.map((user) => (
+                        <TableRow key={user._id} className="bg-gray-900">
                           <TableCell className="font-medium text-gray-200">{user.username}</TableCell>
                           <TableCell className="text-gray-300">{user.isAdmin ? 'Yes' : 'No'}</TableCell>
                           <TableCell>
