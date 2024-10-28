@@ -15,12 +15,23 @@ export async function GET() {
       _id: user._id.toString(),
     }));
 
-    return NextResponse.json({ users: usersWithId }, { status: 200 });
+    return NextResponse.json(
+      { users: usersWithId },
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'Surrogate-Control': 'no-store',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(
       { error: 'Failed to fetch users' },
-      { status: 500 }
+      { status: 500, headers: { 'Cache-Control': 'no-store' } }
     );
   }
 }

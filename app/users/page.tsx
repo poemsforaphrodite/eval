@@ -89,7 +89,15 @@ export default function AdminUsersPage() {
   // Define fetchUsers using useCallback to ensure it's accessible throughout the component
   const fetchUsers = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/users');
+      const response = await fetch('/api/admin/users', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Add cache options to prevent caching
+        cache: 'no-store', // Ensure no caching in the browser
+      });
+
       if (!response.ok) {
         throw new Error('Failed to fetch users');
       }
