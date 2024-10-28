@@ -124,7 +124,13 @@ export default function AdminUsersPage() {
   const fetchUsers = async () => {
     try {
       // Check database connection first
-      const response = await fetch('/api/admin/check-db');
+      const response = await fetch('/api/admin/check-db', {
+        cache: 'no-store',
+        headers: {
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
+      });
       const { connected } = await response.json();
       
       if (!connected) {
@@ -135,7 +141,14 @@ export default function AdminUsersPage() {
 
       setIsDatabaseReady(true);
       
-      const usersResponse = await fetch('/api/admin/users');
+      const usersResponse = await fetch('/api/admin/users', {
+        cache: 'no-store',
+        headers: {
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
+      });
+      
       if (!usersResponse.ok) {
         throw new Error('Failed to fetch users');
       }
@@ -153,6 +166,11 @@ export default function AdminUsersPage() {
       try {
         const response = await fetch(`/api/admin/users/remove?userId=${encodeURIComponent(userId)}`, {
           method: 'DELETE',
+          cache: 'no-store',
+          headers: {
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+          },
         });
         
         if (!response.ok) {
@@ -160,7 +178,7 @@ export default function AdminUsersPage() {
         }
         
         // Fetch updated user list after deletion
-        fetchUsers();
+        await fetchUsers();
       } catch (err) {
         setError('Failed to delete user. Please try again.');
       }
