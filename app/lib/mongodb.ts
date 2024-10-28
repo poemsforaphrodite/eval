@@ -56,11 +56,21 @@ export async function createUser(username: string, hashedPassword: string, apiKe
 
 // Add this new function to get users from MongoDB
 export async function getUsers(): Promise<Document[]> {
-  const db = await getDatabase();
-  const users = db.collection('users');
-  
-  // Fetch all users, excluding the password field
-  return users.find({}, { projection: { password: 0 } }).toArray();
+  try {
+    const isConnected = await isDatabaseConnected();
+    if (!isConnected) {
+      throw new Error('Database not connected');
+    }
+
+    const db = await getDatabase();
+    const users = db.collection('users');
+    
+    // Fetch all users, excluding the password field
+    return users.find({}, { projection: { password: 0 } }).toArray();
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    throw error;
+  }
 }
 
 // Add this new function
@@ -69,4 +79,17 @@ export async function getUserApiKey(username: string): Promise<string | null> {
   const users = db.collection('users');
   const user = await users.findOne({ username }, { projection: { apiKey: 1 } });
   return user ? user.apiKey : null;
+}
+
+// Add this new function to check database connection
+export async function isDatabaseConnected(): Promise<boolean> {
+  try {
+    const client = await clientPromise;
+    // Ping the database to check connection
+    await client.db().command({ ping: 1 });
+    return true;
+  } catch (error) {
+    console.error('Database connection check failed:', error);
+    return false;
+  }
 }

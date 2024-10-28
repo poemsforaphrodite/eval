@@ -84,6 +84,7 @@ export default function AdminUsersPage() {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newIsAdmin, setNewIsAdmin] = useState(false);
+  const [isDatabaseReady, setIsDatabaseReady] = useState(false);
 
   useEffect(() => {
     const storedUsername = Cookies.get('username');
@@ -92,7 +93,16 @@ export default function AdminUsersPage() {
     } else {
       router.push('/login');
     }
-  }, [router]);
+
+    // Set up periodic refresh with exponential backoff if database isn't ready
+    const refreshInterval = setInterval(() => {
+      if (isAdmin) {
+        fetchUsers();
+      }
+    }, isDatabaseReady ? 5000 : 1000); // Shorter interval if database isn't ready
+
+    return () => clearInterval(refreshInterval);
+  }, [router, isAdmin, isDatabaseReady]); // Add isDatabaseReady to dependencies
 
   const checkAdminStatus = async (username: string) => {
     try {
@@ -113,11 +123,23 @@ export default function AdminUsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/admin/users');
-      if (!response.ok) {
+      // Check database connection first
+      const response = await fetch('/api/admin/check-db');
+      const { connected } = await response.json();
+      
+      if (!connected) {
+        setError('Database not ready. Retrying...');
+        setIsDatabaseReady(false);
+        return;
+      }
+
+      setIsDatabaseReady(true);
+      
+      const usersResponse = await fetch('/api/admin/users');
+      if (!usersResponse.ok) {
         throw new Error('Failed to fetch users');
       }
-      const data = await response.json();
+      const data = await usersResponse.json();
       setUsers(data);
     } catch (err) {
       setError('Failed to load users. Please try again.');
@@ -137,8 +159,8 @@ export default function AdminUsersPage() {
           throw new Error('Failed to delete user');
         }
         
-        // Update the local state immediately after successful deletion
-        setUsers(users.filter(user => user._id !== userId));
+        // Fetch updated user list after deletion
+        fetchUsers();
       } catch (err) {
         setError('Failed to delete user. Please try again.');
       }
