@@ -132,10 +132,13 @@ export default function AdminUsersPage() {
         const response = await fetch(`/api/admin/users/remove?userId=${encodeURIComponent(userId)}`, {
           method: 'DELETE',
         });
+        
         if (!response.ok) {
           throw new Error('Failed to delete user');
         }
-        fetchUsers(); // Refresh the user list
+        
+        // Update the local state immediately after successful deletion
+        setUsers(users.filter(user => user._id !== userId));
       } catch (err) {
         setError('Failed to delete user. Please try again.');
       }
