@@ -56,6 +56,7 @@ export default function WorstPerformingSlicesPage() {
   const [errors, setErrors] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
+  const [showAllEvaluations, setShowAllEvaluations] = useState(false);
 
   useEffect(() => {
     const storedUsername = Cookies.get('username');
@@ -82,15 +83,42 @@ export default function WorstPerformingSlicesPage() {
     }
   };
 
+  const isPartOfCurrentSession = (evaluations: Evaluation[]): Evaluation[] => {
+    if (evaluations.length === 0) return [];
+    
+    const TIME_GAP_THRESHOLD = 5 * 60 * 1000; // 5 minutes in milliseconds
+    const sortedEvals = [...evaluations].sort((a, b) => 
+      new Date(b.evaluatedAt).getTime() - new Date(a.evaluatedAt).getTime()
+    );
+    
+    const currentSessionEvals: Evaluation[] = [sortedEvals[0]];
+    const latestTime = new Date(sortedEvals[0].evaluatedAt).getTime();
+    
+    for (let i = 1; i < sortedEvals.length; i++) {
+      const evalTime = new Date(sortedEvals[i].evaluatedAt).getTime();
+      if (latestTime - evalTime < TIME_GAP_THRESHOLD) {
+        currentSessionEvals.push(sortedEvals[i]);
+      } else {
+        break;
+      }
+    }
+    
+    return currentSessionEvals;
+  };
+
   const fetchEvaluations = async (user: string, modelName: string) => {
     setLoading(true);
     try {
-      // Remove the model type from the modelName
       const cleanModelName = modelName.split(' (')[0];
-      
       const response = await axios.get(`/api/evaluations?username=${encodeURIComponent(user)}&model_name=${encodeURIComponent(cleanModelName)}`);
-      setEvaluations(response.data.evaluations);
-      calculateWorstSlices(response.data.evaluations);
+      
+      // Filter evaluations based on showAllEvaluations flag
+      const relevantEvaluations = showAllEvaluations 
+        ? response.data.evaluations
+        : isPartOfCurrentSession(response.data.evaluations);
+
+      setEvaluations(relevantEvaluations);
+      calculateWorstSlices(relevantEvaluations);
     } catch (error) {
       console.error('Error fetching evaluations:', error);
       setErrors(['Failed to fetch evaluations.']);
@@ -98,6 +126,12 @@ export default function WorstPerformingSlicesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (username && selectedModelName) {
+      fetchEvaluations(username, selectedModelName);
+    }
+  }, [showAllEvaluations]);
 
   const calculateWorstSlices = (evaluations: Evaluation[]) => {
     const metrics = ['Accuracy', 'Hallucination', 'Groundedness', 'Relevance', 'Recall', 'Precision', 'Consistency', 'BiasDetection'];
@@ -156,7 +190,21 @@ export default function WorstPerformingSlicesPage() {
           >
             <Card className="mb-8 bg-gray-800 border-gray-700 shadow-lg">
               <CardHeader>
-                <CardTitle className="text-2xl font-bold text-white">Select Model</CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-2xl font-bold text-white">Select Model</CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="showAllEvaluations"
+                      checked={showAllEvaluations}
+                      onChange={(e) => setShowAllEvaluations(e.target.checked)}
+                      className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500"
+                    />
+                    <label htmlFor="showAllEvaluations" className="text-sm text-gray-300">
+                      Show All Evaluations
+                    </label>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <Select onValueChange={handleModelChange} value={selectedModelName}>

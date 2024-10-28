@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts'; // Updated Recharts components
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { LogOut, Search, Menu, AlertCircle, LayoutDashboard, TestTube, Settings, Map, TrendingDown } from "lucide-react"
+import { LogOut, Search, Menu, AlertCircle, LayoutDashboard, TestTube, Settings, Map, TrendingDown, Trash2 } from "lucide-react"
 import { motion } from "framer-motion"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import Sidebar from '@/components/Sidebar';
 
 interface Evaluation {
+  _id: string;  // Add this line
   username: string;
   modelName: string;
   prompt: string;
@@ -306,6 +307,78 @@ export default function Dashboard() {
     }
   };
 
+  const handleDeletePrompt = async (index: number) => {
+    if (!username || !evaluations[index]) return;
+
+    const evaluation = evaluations[index];
+    const confirmed = window.confirm('Are you sure you want to delete this evaluation?');
+    
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch('/api/evaluations/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: evaluation._id  // Send only the ID
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Remove the evaluation from the local state
+        const updatedEvaluations = evaluations.filter((_, i) => i !== index);
+        setEvaluations(updatedEvaluations);
+
+        // Update the charts and summary data
+        const updatedChartData = chartData.filter((_, i) => i !== index);
+        setChartData(updatedChartData);
+
+        // Recalculate summary data
+        const totalLatency = updatedEvaluations.reduce((sum, evaluation) => sum + (evaluation.latency || 0), 0);
+        const averageLatency = updatedEvaluations.length > 0 ? totalLatency / updatedEvaluations.length : 0;
+
+        const factorSums: { [key: string]: number } = {};
+        updatedEvaluations.forEach((evaluation: Evaluation) => {
+          Object.entries(evaluation.factors).forEach(([factor, details]) => {
+            if (factorSums[factor]) {
+              factorSums[factor] += details.score;
+            } else {
+              factorSums[factor] = details.score;
+            }
+          });
+        });
+
+        const averageScores: { [key: string]: number } = {};
+        Object.entries(factorSums).forEach(([factor, sum]) => {
+          averageScores[factor] = updatedEvaluations.length > 0 ? 
+            parseFloat((sum / updatedEvaluations.length).toFixed(2)) : 0;
+        });
+
+        setSummaryData({
+          totalQueries: updatedEvaluations.length,
+          averageLatency,
+          averageScores,
+        });
+
+        // Update low score queries
+        const lowScores = updatedEvaluations.filter(evaluation => 
+          Object.values(evaluation.factors).some(factor => factor.score < THRESHOLD)
+        );
+        setLowScoreQueries(lowScores);
+
+      } else {
+        setErrors([data.message || 'Failed to delete evaluation']);
+      }
+    } catch (error) {
+      console.error('Error deleting evaluation:', error);
+      setErrors(['Failed to delete evaluation. Please try again.']);
+    }
+  };
+
   if (!username) {
     return null; // or a loading spinner
   }
@@ -505,6 +578,7 @@ export default function Dashboard() {
                         <th scope="col" className="px-6 py-3">Consistency</th>
                         <th scope="col" className="px-6 py-3">Bias Detection</th>
                         <th scope="col" className="px-6 py-3">Latency (ms)</th>
+                        <th scope="col" className="px-6 py-3">Delete</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -528,6 +602,11 @@ export default function Dashboard() {
                           <TableCell className="text-gray-300">{evalResult.factors.Consistency.score}</TableCell>
                           <TableCell className="text-gray-300">{evalResult.factors.BiasDetection.score}</TableCell>
                           <TableCell className="text-gray-300">{evalResult.latency || 0}</TableCell>
+                          <TableCell className="text-gray-300">
+                            <Button variant="ghost" size="icon" onClick={() => handleDeletePrompt(idx)}>
+                              <Trash2 className="h-4 w-4 text-red-400" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </tbody>
