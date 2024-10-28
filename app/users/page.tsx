@@ -88,12 +88,14 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     const storedUsername = Cookies.get('username');
+    console.log('Stored username:', storedUsername); // Add this debug log
+    
     if (storedUsername) {
       checkAdminStatus(storedUsername);
     } else {
       router.push('/login');
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -121,15 +123,23 @@ export default function AdminUsersPage() {
   const checkAdminStatus = async (username: string) => {
     try {
       const response = await fetch(`/api/check-admin?username=${encodeURIComponent(username)}`);
+      if (!response.ok) {
+        throw new Error('Failed to check admin status');
+      }
+      
       const data = await response.json();
+      console.log('Admin check response:', data); // Add this debug log
+      
       setIsAdmin(data.isAdmin);
       if (data.isAdmin) {
-        fetchUsers();
+        // Move fetchUsers call outside this function since it's already in a useEffect
+        setLoading(false);
       } else {
         setError('You do not have permission to view this page.');
         setLoading(false);
       }
     } catch (err) {
+      console.error('Admin check error:', err); // Add this debug log
       setError('Failed to check admin status. Please try again.');
       setLoading(false);
     }
@@ -199,6 +209,28 @@ export default function AdminUsersPage() {
     setNewUsername('');
     setNewPassword('');
     setNewIsAdmin(false);
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/admin/users/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete user');
+      }
+
+      // Remove the deleted user from the state
+      setUsers(users.filter(user => user._id !== userId));
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      setError('Failed to delete user. Please try again.');
+    }
   };
 
   if (loading) return <div className="text-center mt-8 text-gray-300">Loading...</div>;
