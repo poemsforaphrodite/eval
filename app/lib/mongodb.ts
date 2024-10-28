@@ -54,24 +54,6 @@ export async function createUser(username: string, hashedPassword: string, apiKe
   await users.insertOne({ username, password: hashedPassword, apiKey, isAdmin });
 }
 
-// Add this new function to get users from MongoDB
-export async function getUsers(): Promise<Document[]> {
-  try {
-    const isConnected = await isDatabaseConnected();
-    if (!isConnected) {
-      throw new Error('Database not connected');
-    }
-
-    const db = await getDatabase();
-    const users = db.collection('users');
-    
-    // Fetch all users, excluding the password field
-    return users.find({}, { projection: { password: 0 } }).toArray();
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    throw error;
-  }
-}
 
 // Add this new function
 export async function getUserApiKey(username: string): Promise<string | null> {

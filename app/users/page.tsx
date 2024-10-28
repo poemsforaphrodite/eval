@@ -98,41 +98,24 @@ export default function AdminUsersPage() {
   useEffect(() => {
     if (!isAdmin) return;
 
-    let eventSource: EventSource;
-
-    const connectToStream = () => {
-      eventSource = new EventSource('/api/admin/users/stream');
-
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.users) {
-            setUsers(data.users);
-            setLoading(false);
-            setIsDatabaseReady(true);
-          }
-        } catch (error) {
-          console.error('Error parsing SSE data:', error);
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/admin/users');
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
         }
-      };
-
-      eventSource.onerror = (error) => {
-        console.error('SSE error:', error);
-        eventSource.close();
-        setError('Connection lost. Reconnecting...');
-        // Attempt to reconnect after a delay
-        setTimeout(connectToStream, 5000);
-      };
-    };
-
-    connectToStream();
-
-    // Cleanup function
-    return () => {
-      if (eventSource) {
-        eventSource.close();
+        const data = await response.json();
+        setUsers(data.users);
+        setLoading(false);
+        setIsDatabaseReady(true);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        setError('Failed to fetch users');
+        setLoading(false);
       }
     };
+
+    fetchUsers();
   }, [isAdmin]);
 
   const checkAdminStatus = async (username: string) => {
@@ -152,62 +135,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  const fetchUsers = async () => {
-    try {
-      // Check database connection first
-      const response = await fetch('/api/admin/check-db', {
-        cache: 'no-store',
-        headers: {
-          'Pragma': 'no-cache',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-        },
-      });
-      const { connected } = await response.json();
-      
-      if (!connected) {
-        setError('Database not ready. Retrying...');
-        setIsDatabaseReady(false);
-        return;
-      }
-
-      setIsDatabaseReady(true);
-      
-      const usersResponse = await fetch('/api/admin/users', {
-        cache: 'no-store',
-        headers: {
-          'Pragma': 'no-cache',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-        },
-      });
-      
-      if (!usersResponse.ok) {
-        throw new Error('Failed to fetch users');
-      }
-      const data = await usersResponse.json();
-      setUsers(data);
-    } catch (err) {
-      setError('Failed to load users. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        const response = await fetch(`/api/admin/users/remove?userId=${encodeURIComponent(userId)}`, {
-          method: 'DELETE',
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to delete user');
-        }
-        // No need to manually fetch users - the SSE will handle the update
-      } catch (err) {
-        setError('Failed to delete user. Please try again.');
-      }
-    }
-  };
+  
 
   const handleLogout = () => {
     Cookies.remove('username');
