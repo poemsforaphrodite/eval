@@ -105,6 +105,7 @@ export default function AdminUsersPage() {
       setUsers(data.users);
       setLoading(false);
       setIsDatabaseReady(true);
+      console.log('Users fetched:', data.users);
     } catch (error) {
       console.error('Error fetching users:', error);
       setError('Failed to fetch users');
