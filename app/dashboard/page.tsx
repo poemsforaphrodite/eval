@@ -67,32 +67,6 @@ const truncateText = (text: any, maxLength: number = 50) => {
   return str.slice(0, maxLength) + '...';
 };
 
-// Add this helper function at the top
-const isPartOfCurrentSession = (evaluations: Evaluation[]): Evaluation[] => {
-  console.log('isPartOfCurrentSession called with:', evaluations.length, 'evaluations'); // Debug log 6
-  if (evaluations.length === 0) return [];
-  
-  const TIME_GAP_THRESHOLD = 5 * 60 * 1000; // 5 minutes in milliseconds
-  const sortedEvals = [...evaluations].sort((a, b) => 
-    new Date(b.evaluatedAt).getTime() - new Date(a.evaluatedAt).getTime()
-  );
-  
-  const currentSessionEvals: Evaluation[] = [sortedEvals[0]];
-  const latestTime = new Date(sortedEvals[0].evaluatedAt).getTime();
-  
-  for (let i = 1; i < sortedEvals.length; i++) {
-    const evalTime = new Date(sortedEvals[i].evaluatedAt).getTime();
-    if (latestTime - evalTime < TIME_GAP_THRESHOLD) {
-      currentSessionEvals.push(sortedEvals[i]);
-    } else {
-      break;
-    }
-  }
-  
-  console.log('Returning session evaluations:', currentSessionEvals.length); // Debug log 7
-  return currentSessionEvals;
-};
-
 export default function Dashboard() {
   const router = useRouter();
   const [username, setUsername] = useState<string | undefined>('');
@@ -115,7 +89,6 @@ export default function Dashboard() {
   });
   const [apiKey, setApiKey] = useState<string>('');
   const [showApiKey, setShowApiKey] = useState(false);
-  const [showAllEvaluations, setShowAllEvaluations] = useState(false);
 
   useEffect(() => {
     const storedUsername = Cookies.get('username');
@@ -130,10 +103,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (username && selectedModelName) {
-      console.log('Fetching evaluations with showAllEvaluations:', showAllEvaluations); // Debug log 4
       fetchEvaluations(username);
     }
-  }, [username, selectedModelName, showAllEvaluations]); // Add showAllEvaluations to dependencies
+  }, [username, selectedModelName]); // Add showAllEvaluations to dependencies
 
   useEffect(() => {
     const lowScores = evaluations.filter(evaluation => 
@@ -174,16 +146,9 @@ export default function Dashboard() {
       const response = await fetch(`/api/evaluations?username=${user}&model_name=${encodeURIComponent(modelIdentifier)}`);
       const data = await response.json();
 
-      console.log('Raw API response:', data.evaluations); // Debug log 1
-      console.log('Show all evaluations flag:', showAllEvaluations); // Debug log 2
-
       if (Array.isArray(data.evaluations)) {
-        // Use all evaluations when showAllEvaluations is true
-        const relevantEvaluations = showAllEvaluations 
-          ? data.evaluations  
-          : isPartOfCurrentSession(data.evaluations);
+        const relevantEvaluations = data.evaluations;
         
-        console.log('Filtered evaluations:', relevantEvaluations); // Debug log 3
         setEvaluations(relevantEvaluations);
         
         // Update summary data and charts with the relevant evaluations
@@ -301,7 +266,6 @@ export default function Dashboard() {
 
   // Add the reset handler
   const handleReset = () => {
-    setShowAllEvaluations(false);
     if (username) {
       fetchEvaluations(username);
     }
@@ -432,21 +396,6 @@ export default function Dashboard() {
                   <div>
                     <CardTitle className="text-purple-400">Available Models</CardTitle>
                     <CardDescription className="text-gray-400">Select a model to view its evaluation results.</CardDescription>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="showAllEvaluations"
-                      checked={showAllEvaluations}
-                      onChange={(e) => {
-                        console.log('Checkbox changed to:', e.target.checked); // Debug log 5
-                        setShowAllEvaluations(e.target.checked);
-                      }}
-                      className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500"
-                    />
-                    <label htmlFor="showAllEvaluations" className="text-sm text-gray-300">
-                      Show All Evaluations
-                    </label>
                   </div>
                 </div>
               </CardHeader>
