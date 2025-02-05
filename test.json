@@ -1,0 +1,102 @@
+[
+    {
+      "prompt": "What is supervised learning?",
+      "context": "Supervised learning uses labeled datasets to train algorithms.",
+      "response": "Supervised learning uses labeled data."
+    },
+    {
+      "prompt": "How to detect overfitting?",
+      "context": "Overfitting occurs when model performs well on training data but poorly on test data.",
+      "response": "Check if validation accuracy is much lower than training accuracy."
+    },
+    {
+      "prompt": "What is k-fold cross-validation?",
+      "context": "A resampling technique where data is split into k subsets for iterative validation.",
+      "response": "Splitting data into 3 parts for validation."
+    },
+    {
+      "prompt": "What does ReLU do?",
+      "context": "Rectified Linear Unit introduces non-linearity by outputting 0 for negative inputs.",
+      "response": "Makes all negative values positive."
+    },
+    {
+      "prompt": "What loss function for regression?",
+      "context": "Mean Squared Error (MSE) is commonly used for regression tasks.",
+      "response": "Cross-entropy loss"
+    },
+    {
+      "prompt": "What is L2 regularization?",
+      "context": "Adds squared magnitude of weights to loss function to prevent overfitting.",
+      "response": "Adds absolute values of weights to loss."
+    },
+    {
+      "prompt": "Define precision vs recall",
+      "context": "Precision = TP/(TP+FP), Recall = TP/(TP+FN)",
+      "response": "Both measure classification accuracy."
+    },
+    {
+      "prompt": "What is gradient descent?",
+      "context": "Optimization algorithm that minimizes loss by updating parameters in direction of negative gradient.",
+      "response": "A way to calculate gradients for neural networks."
+    },
+    {
+      "prompt": "What are CNNs good for?",
+      "context": "Convolutional Neural Networks excel at image processing tasks.",
+      "response": "Time series forecasting"
+    },
+    {
+      "prompt": "What is an RNN?",
+      "context": "Recurrent Neural Networks handle sequential data through internal memory.",
+      "response": "Neural network with repeating layers."
+    },
+    {
+      "prompt": "When to use dropout?",
+      "context": "During training to prevent overfitting by randomly disabling neurons.",
+      "response": "Always use it, even during inference."
+    },
+    {
+      "prompt": "What is batch normalization?",
+      "context": "Normalizes layer inputs by adjusting and scaling activations.",
+      "response": "Normalizing the entire dataset before training."
+    },
+    {
+      "prompt": "What is SVM kernel trick?",
+      "context": "Allows linear separation in higher dimensions without explicitly calculating coordinates.",
+      "response": "A method to visualize decision boundaries."
+    },
+    {
+      "prompt": "Bagging vs Boosting?",
+      "context": "Bagging uses parallel weak learners, Boosting sequentially improves them.",
+      "response": "Both combine multiple models."
+    },
+    {
+      "prompt": "What is F1 score?",
+      "context": "Harmonic mean of precision and recall.",
+      "response": "Average of precision and recall."
+    },
+    {
+      "prompt": "PCA purpose?",
+      "context": "Dimensionality reduction through orthogonal transformation.",
+      "response": "Feature selection method."
+    },
+    {
+      "prompt": "What does ROC-AUC measure?",
+      "context": "Measures classifier's ability to distinguish classes across thresholds.",
+      "response": "Area under the accuracy curve."
+    },
+    {
+      "prompt": "What causes high bias?",
+      "context": "Oversimplified model that underfits training data.",
+      "response": "Too many model parameters."
+    },
+    {
+      "prompt": "What are transformers?",
+      "context": "Attention-based architecture for sequence modeling without recurrence.",
+      "response": "Neural networks that change input dimensions."
+    },
+    {
+      "prompt": "Adam optimizer advantage?",
+      "context": "Adaptive learning rates for different parameters with momentum.",
+      "response": "Fixed learning rate with regularization."
+    }
+  ]

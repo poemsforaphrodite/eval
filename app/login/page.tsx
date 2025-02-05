@@ -103,6 +103,9 @@ export default function LoginPage() {
               <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                 Log In
               </Button>
+              <p className="text-sm text-gray-400 text-center mt-2">
+                For testing, use username: "test" and password: "test"
+              </p>
             </form>
           )}
           <Link href="/signup" className="w-full">
