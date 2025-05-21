@@ -143,7 +143,7 @@ export default function Dashboard() {
         model => `${model.model_name} (${capitalize(model.model_type)})` === selectedModelName
       );
       const modelIdentifier = selectedModel ? selectedModel.model_name : '';
-      const response = await fetch(`/api/evaluations?username=${user}&model_name=${encodeURIComponent(modelIdentifier)}`);
+      const response = await fetch(`/api/evaluations?username=${user}&model_name=${encodeURIComponent(modelIdentifier)}&timeRange=all`);
       const data = await response.json();
 
       if (Array.isArray(data.evaluations)) {

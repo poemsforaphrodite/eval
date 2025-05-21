@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const username = searchParams.get('username');
   const modelName = searchParams.get('model_name'); // Keep as 'model_name' for query parameter
-  const timeRange = searchParams.get('timeRange') || 'day';
+  const timeRange = searchParams.get('timeRange') || 'all'; // Change default to 'all'
   const isAdmin = searchParams.get('isAdmin') === 'true';
 
   if (!username) {
@@ -28,28 +28,34 @@ export async function GET(req: NextRequest) {
     
     // Calculate the start date based on the time range
     const now = new Date();
-    let startDate;
-    switch (timeRange) {
-      case 'hour':
-        startDate = new Date(now.getTime() - 60 * 60 * 1000);
-        break;
-      case 'day':
-        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        break;
-      case 'week':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case 'month':
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Default to last day
-    }
-
     let query: any = {
-      modelName: modelName,
-      evaluatedAt: { $gte: startDate }
+      modelName: modelName
     };
+    
+    // Only apply time filter if not 'all'
+    if (timeRange !== 'all') {
+      let startDate;
+      switch (timeRange) {
+        case 'hour':
+          startDate = new Date(now.getTime() - 60 * 60 * 1000);
+          break;
+        case 'day':
+          startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          startDate = null;
+      }
+      
+      if (startDate) {
+        query.evaluatedAt = { $gte: startDate };
+      }
+    }
 
     // If not admin, filter by username
     if (!isAdmin) {

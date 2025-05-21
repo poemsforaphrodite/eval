@@ -179,7 +179,7 @@ export default function AdminUsersPage() {
     setSelectedModel(modelName);
     if (selectedUser) {
       try {
-        const response = await fetch(`/api/evaluations?username=${encodeURIComponent(selectedUser)}&model_name=${encodeURIComponent(modelName)}&timeRange=day`);
+        const response = await fetch(`/api/evaluations?username=${encodeURIComponent(selectedUser)}&model_name=${encodeURIComponent(modelName)}&timeRange=all`);
         if (!response.ok) {
           throw new Error('Failed to fetch evaluations');
         }

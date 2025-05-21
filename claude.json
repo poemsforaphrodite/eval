@@ -1,0 +1,102 @@
+[
+    {
+      "prompt": "What is supervised learning?",
+      "context": "Supervised learning uses labeled datasets to train algorithms.",
+      "response": "Supervised learning is a machine learning approach where algorithms are trained using labeled datasets. The model learns to map input data to output labels based on example pairs, enabling it to make predictions on new, unseen data."
+    },
+    {
+      "prompt": "How to detect overfitting?",
+      "context": "Overfitting occurs when model performs well on training data but poorly on test data.",
+      "response": "Overfitting can be detected when a model performs significantly better on training data than on test data. Key indicators include a growing gap between training and validation error metrics, high training accuracy but poor validation/test accuracy, and the model being overly sensitive to small fluctuations in the training data."
+    },
+    {
+      "prompt": "What is k-fold cross-validation?",
+      "context": "A resampling technique where data is split into k subsets for iterative validation.",
+      "response": "K-fold cross-validation is a resampling technique where the dataset is divided into k equal subsets (folds). The model is trained k times, each time using k-1 folds for training and the remaining fold for validation. This allows for more robust model evaluation by ensuring all data points are used for both training and validation."
+    },
+    {
+      "prompt": "What does ReLU do?",
+      "context": "Rectified Linear Unit introduces non-linearity by outputting 0 for negative inputs.",
+      "response": "ReLU (Rectified Linear Unit) is an activation function that introduces non-linearity into neural networks by outputting 0 for any negative input and passing positive values unchanged (f(x) = max(0, x)). This simple yet effective function helps neural networks learn complex patterns while avoiding issues like vanishing gradients."
+    },
+    {
+      "prompt": "What loss function for regression?",
+      "context": "Mean Squared Error (MSE) is commonly used for regression tasks.",
+      "response": "Mean Squared Error (MSE) is commonly used as a loss function for regression tasks. It calculates the average squared difference between predicted and actual values, heavily penalizing larger errors and providing a smooth gradient for optimization."
+    },
+    {
+      "prompt": "What is L2 regularization?",
+      "context": "Adds squared magnitude of weights to loss function to prevent overfitting.",
+      "response": "L2 regularization (also called Ridge regularization) adds the squared magnitude of model weights to the loss function to prevent overfitting. By penalizing large weights, it encourages the model to use all features moderately rather than relying heavily on just a few, resulting in better generalization."
+    },
+    {
+      "prompt": "Define precision vs recall",
+      "context": "Precision = TP/(TP+FP), Recall = TP/(TP+FN)",
+      "response": "Precision measures the accuracy of positive predictions, calculated as TP/(TP+FP) - the ratio of true positives to all positive predictions. Recall (sensitivity) measures how well the model finds all positive cases, calculated as TP/(TP+FN) - the ratio of true positives to all actual positives. Precision focuses on the quality of positive predictions, while recall focuses on finding all positive instances."
+    },
+    {
+      "prompt": "What is gradient descent?",
+      "context": "Optimization algorithm that minimizes loss by updating parameters in direction of negative gradient.",
+      "response": "Gradient descent is an optimization algorithm that minimizes the loss function by iteratively updating model parameters in the direction of the negative gradient. It calculates the gradient (slope) of the loss function with respect to each parameter and moves the parameters in the direction that decreases the loss most rapidly."
+    },
+    {
+      "prompt": "What are CNNs good for?",
+      "context": "Convolutional Neural Networks excel at image processing tasks.",
+      "response": "Convolutional Neural Networks (CNNs) excel at image processing tasks due to their ability to capture spatial hierarchies and patterns through convolutional filters. They're widely used for image classification, object detection, image segmentation, and other computer vision applications where spatial relationships are important."
+    },
+    {
+      "prompt": "What is an RNN?",
+      "context": "Recurrent Neural Networks handle sequential data through internal memory.",
+      "response": "Recurrent Neural Networks (RNNs) are neural networks designed to handle sequential data by maintaining an internal memory state. Unlike feedforward networks, RNNs have connections that form cycles, allowing information to persist from one step to the next, making them well-suited for tasks involving sequences like text, time series, or speech."
+    },
+    {
+      "prompt": "When to use dropout?",
+      "context": "During training to prevent overfitting by randomly disabling neurons.",
+      "response": "Dropout should be used during the training phase to prevent overfitting by randomly disabling (or \"dropping out\") a percentage of neurons in each training iteration. This forces the network to learn more robust features and not rely too heavily on any single neuron, improving generalization. During inference/testing, dropout is typically disabled."
+    },
+    {
+      "prompt": "What is batch normalization?",
+      "context": "Normalizes layer inputs by adjusting and scaling activations.",
+      "response": "Batch normalization normalizes the inputs of each layer by adjusting and scaling the activations. It standardizes the outputs of the previous layer for each mini-batch, reducing internal covariate shift. This technique stabilizes and accelerates training, allows higher learning rates, reduces the importance of careful initialization, and can act as a regularizer."
+    },
+    {
+      "prompt": "What is SVM kernel trick?",
+      "context": "Allows linear separation in higher dimensions without explicitly calculating coordinates.",
+      "response": "The SVM kernel trick allows Support Vector Machines to perform non-linear classification by implicitly mapping inputs into higher-dimensional feature spaces where linear separation becomes possible, without actually calculating the coordinates in that space. This is accomplished through kernel functions that compute dot products in the higher-dimensional space while operating in the original input space."
+    },
+    {
+      "prompt": "Bagging vs Boosting?",
+      "context": "Bagging uses parallel weak learners, Boosting sequentially improves them.",
+      "response": "Bagging (Bootstrap Aggregating) trains multiple weak learners in parallel on random subsets of the data and combines their predictions through averaging or voting. Boosting, on the other hand, trains weak learners sequentially, with each subsequent model focusing on correcting the errors of previous models. Bagging reduces variance and helps prevent overfitting, while boosting reduces both bias and variance."
+    },
+    {
+      "prompt": "What is F1 score?",
+      "context": "Harmonic mean of precision and recall.",
+      "response": "The F1 score is the harmonic mean of precision and recall, calculated as 2 * (precision * recall) / (precision + recall). It provides a single metric that balances both precision and recall, especially useful when classes are imbalanced. The harmonic mean ensures that the F1 score is low if either precision or recall is low."
+    },
+    {
+      "prompt": "PCA purpose?",
+      "context": "Dimensionality reduction through orthogonal transformation.",
+      "response": "Principal Component Analysis (PCA) is primarily used for dimensionality reduction through orthogonal transformation. It identifies the axes (principal components) along which data variance is maximized and projects the data onto a lower-dimensional space while preserving as much information as possible. This helps with visualization, noise reduction, and addressing the curse of dimensionality."
+    },
+    {
+      "prompt": "What does ROC-AUC measure?",
+      "context": "Measures classifier's ability to distinguish classes across thresholds.",
+      "response": "ROC-AUC (Receiver Operating Characteristic - Area Under Curve) measures a classifier's ability to distinguish between classes across all possible classification thresholds. The ROC curve plots the true positive rate against the false positive rate at various threshold settings, and the AUC represents the probability that the model ranks a random positive example higher than a random negative example."
+    },
+    {
+      "prompt": "What causes high bias?",
+      "context": "Oversimplified model that underfits training data.",
+      "response": "High bias is caused by an oversimplified model that underfits the training data. When a model makes strong assumptions about the underlying structure of the data or lacks the complexity needed to capture important patterns, it fails to learn the training data adequately. This results in high error on both training and test sets."
+    },
+    {
+      "prompt": "What are transformers?",
+      "context": "Attention-based architecture for sequence modeling without recurrence.",
+      "response": "Transformers are attention-based neural network architectures designed for sequence modeling without using recurrence or convolution. They rely on self-attention mechanisms to weigh the importance of different parts of the input sequence when producing outputs. This parallel processing approach allows transformers to better capture long-range dependencies and has revolutionized natural language processing."
+    },
+    {
+      "prompt": "Adam optimizer advantage?",
+      "context": "Adaptive learning rates for different parameters with momentum.",
+      "response": "Adam optimizer's key advantage is that it adapts learning rates individually for different parameters while incorporating momentum. It combines the benefits of AdaGrad (which works well with sparse gradients) and RMSProp (which adapts to changing gradients). This adaptive approach typically leads to faster convergence, less tuning of the learning rate hyperparameter, and better performance across various deep learning tasks."
+    }
+  ]

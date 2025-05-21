@@ -85,7 +85,7 @@ export default function TimeSpan() {
     averageLatency: 0,
     averageScores: {},
   });
-  const [timeRange, setTimeRange] = useState<'hour' | 'day' | 'week' | 'month'>('day');
+  const [timeRange, setTimeRange] = useState<'hour' | 'day' | 'week' | 'month' | 'all'>('all');
   const [apiKey, setApiKey] = useState<string>('');
   const [showApiKey, setShowApiKey] = useState(false);
 
@@ -367,6 +367,20 @@ export default function TimeSpan() {
                     <CardDescription className="text-gray-400">Evaluation Scores and Latency per Query</CardDescription>
                   </div>
                   <div className="flex gap-2">
+                    <Button
+                      key="all"
+                      variant={timeRange === 'all' ? "default" : "secondary"}
+                      className={`
+                        ${timeRange === 'all' 
+                          ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                          : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                        }
+                        transition-colors
+                      `}
+                      onClick={() => setTimeRange('all')}
+                    >
+                      All Time
+                    </Button>
                     {['hour', 'day', 'week', 'month'].map((range) => (
                       <Button
                         key={range}
